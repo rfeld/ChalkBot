@@ -35,7 +35,9 @@ long int timerCall_us = 500;
 int counter = 0;
 Speed_t carSpeed = stay;
 bool singleStep = false;
-
+String inputString = "";
+const int MAX_PARAMS = 5;
+String param[MAX_PARAMS];
 
 
 
@@ -142,6 +144,59 @@ void timed_function()
   TimerLib.setTimeout_us(timed_function, timerCall_us);
 }
 
+void processInput()
+{
+    // read everything currently available
+    while (UartToESP.available()) 
+    {
+      char inChar = (char)UartToESP.read();      
+      if (inChar != '\n') 
+      {
+        inputString += inChar;
+      }
+      else
+      {
+        // split string at ":" to get command
+        int endOfCmd = inputString.indexOf(":");
+        String cmd = inputString.substring(0,endOfCmd); 
+        cmd.trim();
+
+        // split string at "," to get parameters       
+        int from = endOfCmd+1;
+        for(int i=0; i<MAX_PARAMS; i++)
+        {
+          if(from>0)
+          {
+            int endOfParam = inputString.indexOf(",", from);            
+            param[i] = inputString.substring(from,endOfParam);           
+            param[i].trim();
+            from = endOfParam+1;
+          }         
+          else param[i] =""; 
+        }
+
+        // Debug output
+        for(int i=0; i<MAX_PARAMS; i++)
+        {         
+          Serial.print("param :");
+          Serial.print(i);
+          Serial.print(": ");
+          Serial.println(param[i]);
+        }
+
+        // list of all valid commands - todo use
+        if     (cmd=="stop")    Serial.println("stop");  
+        else if(cmd=="move")    Serial.println("move"); 
+        else if(cmd=="turn")    Serial.println("turn"); 
+        else if(cmd=="chalk")   Serial.println("chalk");
+        else if(cmd=="version") Serial.println("version");
+        else UartToESP.println("ERR:invalid command"); 
+
+        // clear for new input
+        inputString = "";
+      }
+  }  
+}
 
 
 /**
@@ -149,40 +204,13 @@ void timed_function()
  */
 void loop()
 {
-  // if(Serial.available() > 0)
+  // check for data from ESP/WiFi
   if (UartToESP.available() > 0) 
   {
-    
-    // read
-    // int inByte =  Serial.read();
-    int inByte = UartToESP.read(); 
-    
-    // For Debug: Simple Ping/Pong
-    if(inByte =='p')
-    {
-      UartToESP.println("Pong");
-    }
-    
-    
-    // For Debug: Send to Serial (PC)
-    Serial.print((char)inByte);
-    
-    // process
-    switch(inByte)
-    {
-      case '\n': 
-      case '\r': break;
-
-      case '0': move(stay,  10, true ); break;
-      case '1': move(crawl, 10, true ); break;
-      case '2': move(walk,  10, true ); break;
-      case '3': move(jog,   10, true ); break;
-      case '4': move(bolt,  10, true ); break;
-
-      case 'V': move(walk, 10, true ); break;
-      case 'B': move(walk, 10, false); break;
-      case 'T': turn(walk, 10, true ); break;
-      default:  carSpeed = stay; break;      
-    }   
+    processInput();    
   }
+  
 }
+
+
+
