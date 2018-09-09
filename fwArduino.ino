@@ -64,23 +64,39 @@ void processInput()
         inputString += inChar;
       }
       else
-      {    
-        // add to command queue
-        if(cmdIndex<MAX_CMDS) 
+      {          
+        // split string at ":" to get command
+        int endOfCmd = inputString.indexOf(":");
+        String cmd = inputString.substring(0,endOfCmd); 
+        cmd.trim();
+             
+        // check command type
+        if(cmd=="stop")
         {
-          cmdQueue[cmdIndex++] = inputString;
-          UartToESP.print("ACK ");
-          UartToESP.println(MAX_CMDS-cmdIndex);
+          stop();
+          UartToESP.print("Stop ACK ");
+          UartToESP.println(MAX_CMDS);
+          cmdIndex=0;          
         }
-        else  UartToESP.println("ERR: command queue full");
-
-        if(cmdIndex==1) processCmd(inputString);
-        
-        // clear for new input
-        inputString = "";        
+        else
+        {          
+          // add to command queue
+          if(cmdIndex<MAX_CMDS) 
+          {
+            cmdQueue[cmdIndex++] = inputString;
+            UartToESP.print("ACK ");
+            UartToESP.println(MAX_CMDS-cmdIndex);
+          }
+          else  UartToESP.println("ERR: command queue full");
+  
+          if(cmdIndex==1) processCmd(inputString);
+        }  
+       // clear for new input
+        inputString = "";
       }
   }  
 }
+
 
 
 /**
@@ -92,10 +108,10 @@ void processCmd(String input)
     // split string at ":" to get command
     int endOfCmd = input.indexOf(":");
     String cmd = input.substring(0,endOfCmd); 
-    cmd.trim();
+    cmd.trim(); 
     
     // split string at "," to get parameters    
-    const int MAX_PARAMS = 5;
+    const int MAX_PARAMS = 3;
     String params[MAX_PARAMS];   
     int from = endOfCmd+1;
     for(int i=0; i<MAX_PARAMS; i++)
@@ -131,6 +147,7 @@ void processCmd(String input)
 void stop()
 {
   debugOut("stop");
+  steps=0;
 }
 
 
