@@ -101,7 +101,10 @@ void processInput()
         inputString += inChar;
       }
       else
-      {          
+      {   
+        Serial.print("Robert schickt: ");
+        Serial.println(inputString);
+               
         // split string at ":" to get command
         int endOfCmd = inputString.indexOf(":");
         String cmd = inputString.substring(0,endOfCmd); 
@@ -115,7 +118,7 @@ void processInput()
           UartToESP.println(MAX_CMDS);
           cmdIndex=0;          
         }
-        else
+        else if( cmd=="move" || cmd=="turn" || cmd=="chalk" || cmd=="version" )
         {          
           // add to command queue
           if(cmdIndex<MAX_CMDS) 
@@ -133,7 +136,14 @@ void processInput()
           }
   
           if(cmdIndex==1) processCmd(inputString);
-        }  
+        }
+        else
+        {
+          String answer = "ERR: ";
+          answer+= INVALID_CMD;
+          answer+= ", invalid command";
+          UartToESP.println(answer);   
+        }
        // clear for new input
         inputString = "";
       }
