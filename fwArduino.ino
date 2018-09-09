@@ -1,12 +1,37 @@
+/**
+ * Dieser schöne Code ist dafür da den ChalkBot fahren zu lassen.
+ * Kommandos werden von einem über UART angbunden ESP angenommen.
+ * Erreichbar ist der Arduino unter: telnet 192.168.42.47 23
+ * Das Protokoll unterstützt die Kommandos: stop, move und turn (weitere folgen)
+ * 
+ * \author Birgit Feld
+ * \date 2018
+ */
+
+ 
 #include <SoftwareSerial.h>
 #include <uTimerLib.h>
 
-// Hier kommen die Kommandos (per ESP/Wifi) her:
+/**
+* when this debug switch is set to true, instead of motor output, 
+* debug output to the serial monitor is generated. The PWM is then only 1 Hz instead of 1kHz.
+* */
+// #define NO_MOTOR true // todo
+
+// ESP/Wifi communication
 SoftwareSerial UartToESP(11,10); // Rx, Tx
 String inputString = "";
+
+// communication protocoll parameters
 const unsigned int  MAX_CMDS = 3;
 String              cmdQueue[MAX_CMDS];
 unsigned int        cmdIndex=0;
+enum ErrorCode {  
+  NO_ERROR = 0,
+  INVALID_CMD,
+  INVALID_PARAMETER,
+  CMD_QUEUE_FULL
+};
 
 // GPIO definitions
 #define EN        8       //The step motor makes the power end, low level is effective
@@ -15,8 +40,20 @@ unsigned int        cmdIndex=0;
 #define X_STP     2       //The x axis stepper control
 #define Y_STP     3       //The y axis stepper control
 
+// Wheel, Car and Stepper dimensions
+const int WHEEL_DIAMETER = 105; // [mm]
+const int WHEEL_DISTANCE = 240; // [mm] distance between the wheels
+const int STEPS_FOR_FULL_CIRCLE = 200; // full circle of one wheel
+const int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FULL_CIRCLE);  // [µm]
+const int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
 
-long int timerCall_us = 1000000;
+// time parameters
+const unsigned long int START_RAMP = 1000000; // [µs]
+const unsigned long int END_RAMP   =  100000; // [µs]
+const unsigned long int RAMP       =  100000; // [µs]
+unsigned long int callbackTime = START_RAMP;
+
+// Motor Parameters
 bool xDir = true;
 bool yDir = true;
 bool xStep = true;
@@ -24,16 +61,11 @@ bool yStep = true;
 int  steps;
 
 
-
-
 /**
  * setup
  */
 void setup()
 {
-  steps = 0;
-  TimerLib.setTimeout_us(timed_function, timerCall_us);
-  
   // set up the IO tube feet used by the motor to be set to output
   pinMode(X_DIR, OUTPUT); pinMode(X_STP, OUTPUT);
   pinMode(Y_DIR, OUTPUT); pinMode(Y_STP, OUTPUT);
@@ -46,6 +78,11 @@ void setup()
   
   Serial.begin(115200);
   UartToESP.begin(9600);
+
+  Serial.println(DISTANCE_PER_STEP);
+  Serial.println(ROTATION_PER_STEP);
+
+  steps = 0;
 }
 
 
@@ -74,7 +111,7 @@ void processInput()
         if(cmd=="stop")
         {
           stop();
-          UartToESP.print("Stop ACK ");
+          UartToESP.print("ACK: ");
           UartToESP.println(MAX_CMDS);
           cmdIndex=0;          
         }
@@ -84,10 +121,16 @@ void processInput()
           if(cmdIndex<MAX_CMDS) 
           {
             cmdQueue[cmdIndex++] = inputString;
-            UartToESP.print("ACK ");
+            UartToESP.print("ACK: ");
             UartToESP.println(MAX_CMDS-cmdIndex);
           }
-          else  UartToESP.println("ERR: command queue full");
+          else  
+          {
+            String answer = "ERR: ";
+            answer += CMD_QUEUE_FULL;
+            answer += ", cmd queue full";
+            UartToESP.println( answer );
+          }
   
           if(cmdIndex==1) processCmd(inputString);
         }  
@@ -134,7 +177,10 @@ void processCmd(String input)
     else if(cmd=="version") Serial.println("version");
     else
     {
-      UartToESP.println("ERR:invalid command"); 
+      String answer = "ERR: ";
+      answer+= INVALID_CMD;
+      answer+= ", invalid command";
+      UartToESP.println(answer); 
   
       // remove from command queue
       nextInQueue();
@@ -142,7 +188,8 @@ void processCmd(String input)
 }
 
 /**
- * stop -> todo
+ * stop sets the steps variable to zero. At next call of timer, the motor will be stopped.
+ * 
  */
 void stop()
 {
@@ -163,12 +210,24 @@ void stop()
 void move(String distance, String direction, String speed)
 {
   debugOut("move");
-
-  // set direction (if distance is negative -> toggle direction)
-  if(  distance.toInt()<0 || direction == "b" )  xDir = yDir = true;
-  else                                           xDir = yDir = false;
-
-  steps = abs(distance.toInt());  
+  
+  if(distance.toInt() == 0) 
+  {
+    UartToESP.print("ERR: ");
+    UartToESP.print(INVALID_PARAMETER);
+    UartToESP.println(", invalid parameters for move");
+    nextInQueue();
+  }
+  else // start motion
+  {
+    // set direction (if distance is negative -> toggle direction)
+    if(  distance.toInt()<0 || direction == "b" )  xDir = yDir = true;
+    else                                           xDir = yDir = false;
+  
+    steps = abs(distance.toInt()); 
+    callbackTime = START_RAMP;
+    timed_function();
+  }
 }
 
 
@@ -177,7 +236,7 @@ void move(String distance, String direction, String speed)
  * One wheel spinning fw other one bw.
  * 
  * \param degree    in 1 degree steps (todo: test and maybe refine to tenth of a degree)
- * \param direction 'l': turn left (counterclockwise), 'r'(or anything else): turned right (clockwise)      
+ * \param direction 'l': turn left (counterclockwise), 'r' (or anything else): turned right (clockwise)      
  * \param speed     currently ignored -> todo
  
  */
@@ -188,7 +247,19 @@ void turn(String degree, String direction, String speed)
    if(direction == "l") xDir = false;
    else                 yDir = false;
 
-    steps = abs(degree.toInt()); 
+  if(degree.toInt() == 0) 
+    {
+      UartToESP.print("ERR: ");
+      UartToESP.print(INVALID_PARAMETER);
+      UartToESP.println(", invalid parameters for turn");
+      nextInQueue();
+    }
+    else // start motion
+    {
+      steps = abs(degree.toInt());
+      callbackTime = START_RAMP;
+      timed_function();  
+    }
 }
 
 
@@ -202,7 +273,7 @@ void nextInQueue()
   for(int i=0; i<cmdIndex; i++) cmdQueue[i]=cmdQueue[i+1];
   cmdIndex--;
 
-  UartToESP.print("DONE ");
+  UartToESP.print("DONE: ");
   UartToESP.println(MAX_CMDS-cmdIndex);
 
   // call next element if available
@@ -240,16 +311,13 @@ void timed_function()
     steps--;
 
     // command is now completely processed
-    if(steps==0) nextInQueue();    
-  }
-  else  
-  {
-    digitalWrite(EN, HIGH);
-    Serial.print(".");
-  }
-  
-  // restart timer
-  TimerLib.setTimeout_us(timed_function, timerCall_us);
+    if(steps==0) nextInQueue();   
+
+    // restart timer (with ramp up)
+    callbackTime -= RAMP;
+    if(callbackTime < END_RAMP) callbackTime = END_RAMP;
+    TimerLib.setTimeout_us(timed_function, callbackTime);
+  }  
 }
 
 
@@ -260,6 +328,8 @@ void debugOut(String output)
 {
   // UartToESP.println("Debug: " + output);
 }
+
+
 
 /**
  * main loop
