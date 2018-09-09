@@ -1,43 +1,28 @@
 #include <SoftwareSerial.h>
-
 #include <uTimerLib.h>
 
 // Hier kommen die Kommandos (per ESP/Wifi) her:
 SoftwareSerial UartToESP(11,10); // Rx, Tx
+String inputString = "";
+const unsigned int  MAX_CMDS = 3;
+String              cmdQueue[MAX_CMDS];
+unsigned int        cmdIndex=0;
 
-
+// GPIO definitions
 #define EN        8       //The step motor makes the power end, low level is effective
 #define X_DIR     5       //The x-axis moves in the direction of the motor
 #define Y_DIR     6       //The y-axis moves in the direction of the motor
-
 #define X_STP     2       //The x axis stepper control
 #define Y_STP     3       //The y axis stepper control
 
-/*
- * Timer for performing one step will be called n times before step is done
- */
-typedef enum{
-  stay  = 0,
-  crawl = 10,
-  walk  = 4,
-  jog   = 3,
-  bolt  = 2
-}
-Speed_t;
 
-
-bool runX = true;
-bool runY = true;
-bool onOff = true; 
+long int timerCall_us = 1000000;
 bool xDir = true;
 bool yDir = true;
-long int timerCall_us = 500;
-int counter = 0;
-Speed_t carSpeed = stay;
-bool singleStep = false;
-String inputString = "";
-const int MAX_PARAMS = 5;
-String param[MAX_PARAMS];
+bool xStep = true;
+bool yStep = true;
+int  steps;
+
 
 
 
@@ -46,7 +31,7 @@ String param[MAX_PARAMS];
  */
 void setup()
 {
-
+  steps = 0;
   TimerLib.setTimeout_us(timed_function, timerCall_us);
   
   // set up the IO tube feet used by the motor to be set to output
@@ -60,90 +45,14 @@ void setup()
   digitalWrite(EN, LOW);
   
   Serial.begin(115200);
-
   UartToESP.begin(9600);
 }
 
 
-
 /**
- * base function to set the robot movement parameters
- * which will be used with the next timer call
- * 
- * \param distance_mm way to go in milimeter
- * \param speed can be stay, crawl, walk, jog or bolt. \n
- *              If it is stay, all other parameters will be ignored.
- * \param forward when true, backward when false
+ * Parse the WIFI input in order to get command and parameters.
+ * Call the corresponding motion function (stop, move, turn etc)
  */
-void move(Speed_t speed, unsigned int distance_mm, bool forward)
-{
-  carSpeed = speed;
-  if(forward) xDir = yDir = true;
-  else        xDir = yDir = false;
-
-}
-
-/**
- * base function to set parameters for turning the car on the spot. 
- * One wheel spinning vw other one bw.
- * 
- * \param speed can be stay, crawl, walk, jog or bolt. \n
- *              If it is stay, all other parameters will be ignored.\n
- *              bolt is probably not recommended for turning.
- * \param degree in 1 degree steps (todo: test and maybe refine to tenth of a degree)
- * \param direction true=clockwise, false=counterclockwise
- */
-void turn(Speed_t speed, unsigned int degree, bool direction)
-{
-   carSpeed = speed;
-   xDir=true;
-   yDir=true;
-   if(direction) xDir = false;
-   else          yDir = false;
-   
-}
-
-
-void timed_function() 
-{
-  // direction (todo)
-  digitalWrite(Y_DIR, true);
-  digitalWrite(X_DIR, true);
-
-  // distance (todo)
-
-
-
-  // speed
-  if( carSpeed == stay  )
-  {
-    digitalWrite(EN, HIGH); 
-  }
-  else 
-  {
-    digitalWrite(EN, LOW);
-    
-    // move if counter can be devided by desired speed
-    if( onOff && (counter%carSpeed) == 0)  
-    {   
-      digitalWrite(X_STP, HIGH);
-      digitalWrite(Y_STP, HIGH);
-    }
-    else
-    {
-      digitalWrite(X_STP, LOW);
-      digitalWrite(Y_STP, LOW);
-    }
-  
-    onOff = !onOff;
-    if(counter>=crawl) counter = 0;
-    counter++;  
-  }
-  
-  // restart timer
-  TimerLib.setTimeout_us(timed_function, timerCall_us);
-}
-
 void processInput()
 {
     // read everything currently available
@@ -155,49 +64,185 @@ void processInput()
         inputString += inChar;
       }
       else
-      {
-        // split string at ":" to get command
-        int endOfCmd = inputString.indexOf(":");
-        String cmd = inputString.substring(0,endOfCmd); 
-        cmd.trim();
-
-        // split string at "," to get parameters       
-        int from = endOfCmd+1;
-        for(int i=0; i<MAX_PARAMS; i++)
+      {    
+        // add to command queue
+        if(cmdIndex<MAX_CMDS) 
         {
-          if(from>0)
-          {
-            int endOfParam = inputString.indexOf(",", from);            
-            param[i] = inputString.substring(from,endOfParam);           
-            param[i].trim();
-            from = endOfParam+1;
-          }         
-          else param[i] =""; 
+          cmdQueue[cmdIndex++] = inputString;
+          UartToESP.print("ACK ");
+          UartToESP.println(MAX_CMDS-cmdIndex);
         }
+        else  UartToESP.println("ERR: command queue full");
 
-        // Debug output
-        for(int i=0; i<MAX_PARAMS; i++)
-        {         
-          Serial.print("param :");
-          Serial.print(i);
-          Serial.print(": ");
-          Serial.println(param[i]);
-        }
-
-        // list of all valid commands - todo use
-        if     (cmd=="stop")    Serial.println("stop");  
-        else if(cmd=="move")    Serial.println("move"); 
-        else if(cmd=="turn")    Serial.println("turn"); 
-        else if(cmd=="chalk")   Serial.println("chalk");
-        else if(cmd=="version") Serial.println("version");
-        else UartToESP.println("ERR:invalid command"); 
-
+        if(cmdIndex==1) processCmd(inputString);
+        
         // clear for new input
-        inputString = "";
+        inputString = "";        
       }
   }  
 }
 
+
+/**
+ * processCmd sets the new motion parameters
+ * \param input contains command and parameters
+ */
+void processCmd(String input)
+{
+    // split string at ":" to get command
+    int endOfCmd = input.indexOf(":");
+    String cmd = input.substring(0,endOfCmd); 
+    cmd.trim();
+    
+    // split string at "," to get parameters    
+    const int MAX_PARAMS = 5;
+    String params[MAX_PARAMS];   
+    int from = endOfCmd+1;
+    for(int i=0; i<MAX_PARAMS; i++)
+    {
+      params[i] = "";
+      if(from>0)
+      {
+        int endOfParam = input.indexOf(",", from);            
+        params[i] = input.substring(from,endOfParam);           
+        params[i].trim();
+        from = endOfParam+1;
+      }                   
+    }
+    
+    // list of all valid commands
+    if     (cmd=="stop")    stop();
+    else if(cmd=="move")    move(params[0], params[1], params[2]);
+    else if(cmd=="turn")    turn(params[0], params[1], params[2]);
+    else if(cmd=="chalk")   Serial.println("chalk");
+    else if(cmd=="version") Serial.println("version");
+    else
+    {
+      UartToESP.println("ERR:invalid command"); 
+  
+      // remove from command queue
+      nextInQueue();
+    }
+}
+
+/**
+ * stop -> todo
+ */
+void stop()
+{
+  debugOut("stop");
+}
+
+
+/**
+ * base function to set the robot movement parameters, used with the next timer call \n
+ * 
+ * \param distance  way to go in millimeter.
+ *                  distance must be convertable to int. If it is not convertable, chalkBot won't move.
+ *                  Negative values will toggle parameter dir
+ * \param direction 'b' for backwards, 'f' (or anything else) for forwards.
+ * \param speed     currently ignored -> todo 
+ */
+void move(String distance, String direction, String speed)
+{
+  debugOut("move");
+
+  // set direction (if distance is negative -> toggle direction)
+  if(  distance.toInt()<0 || direction == "b" )  xDir = yDir = true;
+  else                                           xDir = yDir = false;
+
+  steps = abs(distance.toInt());  
+}
+
+
+/**
+ * base function to set parameters for turning the car on the spot. 
+ * One wheel spinning fw other one bw.
+ * 
+ * \param degree    in 1 degree steps (todo: test and maybe refine to tenth of a degree)
+ * \param direction 'l': turn left (counterclockwise), 'r'(or anything else): turned right (clockwise)      
+ * \param speed     currently ignored -> todo
+ 
+ */
+void turn(String degree, String direction, String speed)
+{
+   xDir=true;
+   yDir=true;
+   if(direction == "l") xDir = false;
+   else                 yDir = false;
+
+    steps = abs(degree.toInt()); 
+}
+
+
+/**
+ * nextInQueue
+ * move elements in cmd queue and start processing of first element
+ */
+void nextInQueue()
+{      
+  // move elements in queue // todo: Müllt das meinen Speicher zu???
+  for(int i=0; i<cmdIndex; i++) cmdQueue[i]=cmdQueue[i+1];
+  cmdIndex--;
+
+  UartToESP.print("DONE ");
+  UartToESP.println(MAX_CMDS-cmdIndex);
+
+  // call next element if available
+  if(cmdIndex>0) processCmd(cmdQueue[0]);
+}
+
+
+/**
+ * timed_function
+ */
+void timed_function() 
+{  
+  // direction
+  digitalWrite(X_DIR, xDir);
+  digitalWrite(Y_DIR, yDir);
+
+  // full speed
+  xStep=!xStep;
+  yStep=!yStep;  
+  
+
+  // decrease distance
+  if(steps>0) 
+  {
+    digitalWrite(EN, LOW);
+    digitalWrite(X_STP, xStep);
+    digitalWrite(Y_STP, yStep);
+    
+    // Debug: Visualise motion    
+    if      (xDir==false && yDir==false) Serial.print(">");
+    else if (xDir==true  && yDir==true ) Serial.print("<");
+    else if (xDir==false && yDir==true ) Serial.print("l");
+    else if (xDir==true  && yDir==false) Serial.print("r");
+    
+    steps--;
+
+    // command is now completely processed
+    if(steps==0) nextInQueue();    
+  }
+  else  
+  {
+    digitalWrite(EN, HIGH);
+    Serial.print(".");
+  }
+  
+  // restart timer
+  TimerLib.setTimeout_us(timed_function, timerCall_us);
+}
+
+
+/**
+ * debugOutput via WIFI
+ */
+void debugOut(String output)
+{
+  // UartToESP.println("Debug: " + output);
+}
 
 /**
  * main loop
