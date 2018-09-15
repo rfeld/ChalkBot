@@ -12,11 +12,7 @@
 #include <SoftwareSerial.h>
 #include <uTimerLib.h>
 
-/**
-* when this debug switch is set to true, instead of motor output, 
-* debug output to the serial monitor is generated. The PWM is then only 1 Hz instead of 1kHz.
-* */
-// #define NO_MOTOR true // todo
+
 
 // ESP/Wifi communication
 SoftwareSerial UartToESP(11,10); // Rx, Tx
@@ -48,16 +44,16 @@ const int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FUL
 const int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
 
 // time parameters
-const unsigned long int START_RAMP =  7000; // [µs]
-const unsigned long int END_RAMP   =  1000; // [µs]
-const unsigned long int RAMP       =   50; // [µs]
+const unsigned long int START_RAMP =  7000; // [µs]  = 7ms
+const unsigned long int END_RAMP   =  1000; // [µs]  = 1ms
+const unsigned long int RAMP       =    50; // [µs]
 unsigned long int callbackTime = START_RAMP;
 
 // Motor Parameters
-bool xDir = true;
-bool yDir = true;
-bool xStep = true;
-bool yStep = true;
+bool xDir;
+bool yDir;
+bool xStep;
+bool yStep;
 int  steps;
 
 
@@ -232,8 +228,16 @@ void move(String distance, String direction, String speed)
   else // start motion
   {
     // set direction (if distance is negative -> toggle direction)
-    if(  distance.toInt()<0 || direction == "b" )  xDir = yDir = true;
-    else                                           xDir = yDir = false;
+    if(  distance.toInt()<0 || direction == "b" ) 
+    {
+      xDir = true;
+      yDir = false;
+    }
+    else
+    {
+      xDir = false;
+      yDir = true;
+    }
   
     steps = abs(distance.toInt()); 
     callbackTime = START_RAMP;
@@ -252,11 +256,18 @@ void move(String distance, String direction, String speed)
  
  */
 void turn(String degree, String direction, String speed)
-{
-   xDir=true;
-   yDir=true;
-   if(direction == "l") xDir = false;
-   else                 yDir = false;
+{  
+   // set direction
+   if(degree.toInt() < 0 || direction=="l")
+   {
+      xDir = true;
+      yDir = true;
+   }
+   else
+   {
+      xDir = false;
+      yDir = false;
+   }
 
   if(degree.toInt() == 0) 
     {
@@ -316,10 +327,10 @@ void timed_function()
     digitalWrite(Y_STP, yStep);
     
     // Debug: Visualise motion    
-    if      (xDir==false && yDir==false) Serial.print(">");
-    else if (xDir==true  && yDir==true ) Serial.print("<");
-    else if (xDir==false && yDir==true ) Serial.print("l");
-    else if (xDir==true  && yDir==false) Serial.print("r");
+    //    if      (xDir==false && yDir==false) Serial.print(">");
+    //    else if (xDir==true  && yDir==true ) Serial.print("<");
+    //    else if (xDir==false && yDir==true ) Serial.print("l");
+    //    else if (xDir==true  && yDir==false) Serial.print("r");
     
     steps--;
 
