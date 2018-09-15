@@ -48,9 +48,9 @@ const int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FUL
 const int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
 
 // time parameters
-const unsigned long int START_RAMP = 1000000; // [µs]
-const unsigned long int END_RAMP   =  100000; // [µs]
-const unsigned long int RAMP       =  100000; // [µs]
+const unsigned long int START_RAMP =  7000; // [µs]
+const unsigned long int END_RAMP   =  1000; // [µs]
+const unsigned long int RAMP       =   50; // [µs]
 unsigned long int callbackTime = START_RAMP;
 
 // Motor Parameters
@@ -74,7 +74,7 @@ void setup()
   // Prepare to use the LED
   pinMode(13,OUTPUT);
   
-  digitalWrite(EN, LOW);
+  digitalWrite(EN, HIGH);
   
   Serial.begin(115200);
   UartToESP.begin(9600);
@@ -204,6 +204,7 @@ void processCmd(String input)
 void stop()
 {
   debugOut("stop");
+  digitalWrite(EN, HIGH);
   steps=0;
 }
 
@@ -287,7 +288,9 @@ void nextInQueue()
   UartToESP.println(MAX_CMDS-cmdIndex);
 
   // call next element if available
-  if(cmdIndex>0) processCmd(cmdQueue[0]);
+  if(cmdIndex>0)  processCmd(cmdQueue[0]);
+  // or disable motors
+  else            digitalWrite(EN, HIGH);
 }
 
 
