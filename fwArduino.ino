@@ -37,15 +37,15 @@ enum ErrorCode {
 #define Y_STP     3       //The y axis stepper control
 
 // Wheel, Car and Stepper dimensions
-const int WHEEL_DIAMETER = 105; // [mm]
-const int WHEEL_DISTANCE = 240; // [mm] distance between the wheels
-const int STEPS_FOR_FULL_CIRCLE = 200; // full circle of one wheel
-const int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FULL_CIRCLE);  // [µm]
-const int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
+const unsigned long int WHEEL_DIAMETER = 105; // [mm]
+const unsigned long int WHEEL_DISTANCE = 240; // [mm] distance between the wheels
+const unsigned long int STEPS_FOR_FULL_CIRCLE = 200; // full circle of one wheel
+const unsigned long int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FULL_CIRCLE);  // [µm]
+const unsigned long int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
 
 // time parameters
 const unsigned long int START_RAMP =  7000; // [µs]  = 7ms
-const unsigned long int END_RAMP   =  1000; // [µs]  = 1ms
+const unsigned long int END_RAMP   =  3000; // [µs]  = 1ms
 const unsigned long int RAMP       =    50; // [µs]
 unsigned long int callbackTime = START_RAMP;
 
@@ -114,7 +114,7 @@ void processInput()
           UartToESP.println(MAX_CMDS);
           cmdIndex=0;          
         }
-        else if( cmd=="move" || cmd=="turn" || cmd=="chalk" || cmd=="version" )
+        else if( cmd=="move" || cmd=="turn" || cmd=="stepper" || cmd=="chalk" || cmd=="version" )
         {          
           // add to command queue
           if(cmdIndex<MAX_CMDS) 
@@ -138,7 +138,8 @@ void processInput()
           String answer = "ERR: ";
           answer+= INVALID_CMD;
           answer+= ", invalid command";
-          UartToESP.println(answer);   
+          stop();
+          UartToESP.println(answer);             
         }
        // clear for new input
         inputString = "";
@@ -179,6 +180,7 @@ void processCmd(String input)
     if     (cmd=="stop")    stop();
     else if(cmd=="move")    move(params[0], params[1], params[2]);
     else if(cmd=="turn")    turn(params[0], params[1], params[2]);
+    else if(cmd=="stepper") stepperEnable(params[0]);
     else if(cmd=="chalk")   Serial.println("chalk");
     else if(cmd=="version") Serial.println("version");
     else
@@ -202,6 +204,19 @@ void stop()
   debugOut("stop");
   digitalWrite(EN, HIGH);
   steps=0;
+}
+
+
+/**
+ * \param enable when enable is equal to "en" steppers are enabled. Else disabled.
+ * 
+ * Hint! Method stop() and invalid command inputs also disables. Move() and turn() also enable.
+ */
+void stepperEnable(String enable)
+{
+  if(enable=="en") digitalWrite(EN, LOW);
+  else             digitalWrite(EN, HIGH);
+  nextInQueue();
 }
 
 
@@ -239,7 +254,7 @@ void move(String distance, String direction, String speed)
       yDir = true;
     }
   
-    steps = abs(distance.toInt()); 
+    steps = (1000 * (unsigned long int)abs(distance.toInt())) / DISTANCE_PER_STEP;     
     callbackTime = START_RAMP;
     timed_function();
   }
@@ -260,13 +275,13 @@ void turn(String degree, String direction, String speed)
    // set direction
    if(degree.toInt() < 0 || direction=="l")
    {
-      xDir = true;
-      yDir = true;
+      xDir = false;
+      yDir = false;
    }
    else
    {
-      xDir = false;
-      yDir = false;
+      xDir = true;
+      yDir = true;
    }
 
   if(degree.toInt() == 0) 
@@ -278,7 +293,7 @@ void turn(String degree, String direction, String speed)
     }
     else // start motion
     {
-      steps = abs(degree.toInt());
+      steps = (100 * (unsigned long int)abs(degree.toInt())) / ROTATION_PER_STEP;
       callbackTime = START_RAMP;
       timed_function();  
     }
@@ -291,7 +306,7 @@ void turn(String degree, String direction, String speed)
  */
 void nextInQueue()
 {      
-  // move elements in queue // todo: Müllt das meinen Speicher zu???
+  // move elements in queue
   for(int i=0; i<cmdIndex; i++) cmdQueue[i]=cmdQueue[i+1];
   cmdIndex--;
 
@@ -300,8 +315,9 @@ void nextInQueue()
 
   // call next element if available
   if(cmdIndex>0)  processCmd(cmdQueue[0]);
+  // TODO: endtscheiden ob das automatisch passieren soll
   // or disable motors
-  else            digitalWrite(EN, HIGH);
+  // else            digitalWrite(EN, HIGH);
 }
 
 
