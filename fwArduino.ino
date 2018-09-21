@@ -36,12 +36,14 @@ enum ErrorCode {
 #define X_STP     2       //The x axis stepper control
 #define Y_STP     3       //The y axis stepper control
 
+
 // Wheel, Car and Stepper dimensions
 const unsigned long int WHEEL_DIAMETER = 105; // [mm]
 const unsigned long int WHEEL_DISTANCE = 240; // [mm] distance between the wheels
-const unsigned long int STEPS_FOR_FULL_CIRCLE = 200; // full circle of one wheel
-const unsigned long int DISTANCE_PER_STEP = ( (3.1415 * WHEEL_DIAMETER * 1000) / STEPS_FOR_FULL_CIRCLE);  // [µm]
-const unsigned long int ROTATION_PER_STEP = ( 360 / ((3.1415 * WHEEL_DISTANCE ) / DISTANCE_PER_STEP ));   // [µ°]
+const unsigned long int STEPS_PER_ROTATION = 200; // full circle of one wheel
+const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMETER * PI );
+const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
+
 
 // time parameters
 const unsigned long int START_RAMP =  7000; // [µs]  = 7ms
@@ -49,12 +51,17 @@ const unsigned long int END_RAMP   =  3000; // [µs]  = 1ms
 const unsigned long int RAMP       =    50; // [µs]
 unsigned long int callbackTime = START_RAMP;
 
+
+const unsigned long int DEFAULT_RAMP_UP_TIME = 1000; // [ms]
+int  ticks;
+
+
 // Motor Parameters
 bool xDir;
 bool yDir;
 bool xStep;
 bool yStep;
-int  steps;
+
 
 
 /**
@@ -75,10 +82,10 @@ void setup()
   Serial.begin(115200);
   UartToESP.begin(9600);
 
-  Serial.println(DISTANCE_PER_STEP);
-  Serial.println(ROTATION_PER_STEP);
+  Serial.println(STEPS_PER_M);
+  Serial.println(STEPS_PER_TURN);
 
-  steps = 0;
+  ticks = 0;
 }
 
 
@@ -196,14 +203,14 @@ void processCmd(String input)
 }
 
 /**
- * stop sets the steps variable to zero. At next call of timer, the motor will be stopped.
+ * stop sets the ticks variable to zero. At next call of timer, the motor will be stopped.
  * 
  */
 void stop()
 {
   debugOut("stop");
   digitalWrite(EN, HIGH);
-  steps=0;
+  ticks=0;
 }
 
 
@@ -254,7 +261,8 @@ void move(String distance, String direction, String speed)
       yDir = true;
     }
   
-    steps = (1000 * (unsigned long int)abs(distance.toInt())) / DISTANCE_PER_STEP;     
+    int steps = ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000;
+    ticks = 2*steps;
     callbackTime = START_RAMP;
     timed_function();
   }
@@ -265,7 +273,7 @@ void move(String distance, String direction, String speed)
  * base function to set parameters for turning the car on the spot. 
  * One wheel spinning fw other one bw.
  * 
- * \param degree    in 1 degree steps (todo: test and maybe refine to tenth of a degree)
+ * \param degree    in tenth of a degree
  * \param direction 'l': turn left (counterclockwise), 'r' (or anything else): turned right (clockwise)      
  * \param speed     currently ignored -> todo
  
@@ -293,7 +301,8 @@ void turn(String degree, String direction, String speed)
     }
     else // start motion
     {
-      steps = (100 * (unsigned long int)abs(degree.toInt())) / ROTATION_PER_STEP;
+      int steps = ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600;
+      ticks = 2*steps;  
       callbackTime = START_RAMP;
       timed_function();  
     }
@@ -336,7 +345,7 @@ void timed_function()
   
 
   // decrease distance
-  if(steps>0) 
+  if(ticks>0) 
   {
     digitalWrite(EN, LOW);
     digitalWrite(X_STP, xStep);
@@ -348,10 +357,10 @@ void timed_function()
     //    else if (xDir==false && yDir==true ) Serial.print("l");
     //    else if (xDir==true  && yDir==false) Serial.print("r");
     
-    steps--;
+    ticks--;
 
     // command is now completely processed
-    if(steps==0) nextInQueue();   
+    if(ticks==0) nextInQueue();   
 
     // restart timer (with ramp up)
     callbackTime -= RAMP;
