@@ -45,15 +45,10 @@ const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMET
 const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
 
 
-// time parameters
-const unsigned long int START_RAMP =  7000; // [µs]  = 7ms
-const unsigned long int END_RAMP   =  3000; // [µs]  = 1ms
-const unsigned long int RAMP       =    50; // [µs]
-unsigned long int callbackTime = START_RAMP;
-
-
-const unsigned long int DEFAULT_RAMP_UP_TIME = 1000; // [ms]
-int  ticks;
+const unsigned long int DEFAULT_RAMP_UP_TIME_ms = 2000;
+const unsigned long int DEFAULT_INTERVAL_us     = 1000;
+int ticks = 0; // every tick, the timer function is called
+int tacks = 0; // only at tack a step is executed
 
 
 // Motor Parameters
@@ -61,6 +56,7 @@ bool xDir;
 bool yDir;
 bool xStep;
 bool yStep;
+int  steps;
 
 
 
@@ -85,7 +81,7 @@ void setup()
   Serial.println(STEPS_PER_M);
   Serial.println(STEPS_PER_TURN);
 
-  ticks = 0;
+  steps = 0;
 }
 
 
@@ -203,14 +199,14 @@ void processCmd(String input)
 }
 
 /**
- * stop sets the ticks variable to zero. At next call of timer, the motor will be stopped.
+ * stop sets the steps variable to zero. At next call of timer, the motor will be stopped.
  * 
  */
 void stop()
 {
   debugOut("stop");
   digitalWrite(EN, HIGH);
-  ticks=0;
+  steps=0;
 }
 
 
@@ -261,9 +257,7 @@ void move(String distance, String direction, String speed)
       yDir = true;
     }
   
-    int steps = ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000;
-    ticks = 2*steps;
-    callbackTime = START_RAMP;
+    steps = ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
     timed_function();
   }
 }
@@ -301,9 +295,7 @@ void turn(String degree, String direction, String speed)
     }
     else // start motion
     {
-      int steps = ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600;
-      ticks = 2*steps;  
-      callbackTime = START_RAMP;
+      int steps = ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600 * 2;
       timed_function();  
     }
 }
@@ -335,38 +327,61 @@ void nextInQueue()
  */
 void timed_function() 
 {  
-  // direction
-  digitalWrite(X_DIR, xDir);
-  digitalWrite(Y_DIR, yDir);
-
-  // full speed
-  xStep=!xStep;
-  yStep=!yStep;  
-  
-
-  // decrease distance
-  if(ticks>0) 
+  if(steps==0)
   {
-    digitalWrite(EN, LOW);
-    digitalWrite(X_STP, xStep);
-    digitalWrite(Y_STP, yStep);
-    
-    // Debug: Visualise motion    
-    //    if      (xDir==false && yDir==false) Serial.print(">");
-    //    else if (xDir==true  && yDir==true ) Serial.print("<");
-    //    else if (xDir==false && yDir==true ) Serial.print("l");
-    //    else if (xDir==true  && yDir==false) Serial.print("r");
-    
-    ticks--;
+    ticks = tacks = 0;
+    return;
+  }
+  
+  ticks++;
+  int t = (DEFAULT_RAMP_UP_TIME_ms/ticks);
 
-    // command is now completely processed
-    if(ticks==0) nextInQueue();   
-
-    // restart timer (with ramp up)
-    callbackTime -= RAMP;
-    if(callbackTime < END_RAMP) callbackTime = END_RAMP;
-    TimerLib.setTimeout_us(timed_function, callbackTime);
-  }  
+  //  UartToESP.print("ticks ");
+  //  UartToESP.print(ticks);
+  //  UartToESP.print(" tacks ");
+  //  UartToESP.print(tacks);
+  //  UartToESP.print(" t ");
+  //  UartToESP.println(t);
+  
+  if(tacks < t )
+  {
+    tacks++;
+  }
+  else
+  {  
+    // UartToESP.println(tacks);
+    tacks = 0;
+    
+    // direction
+    digitalWrite(X_DIR, xDir);
+    digitalWrite(Y_DIR, yDir);
+  
+    // full speed
+    xStep=!xStep;
+    yStep=!yStep;  
+    
+  
+    // decrease distance
+    if(steps>0) 
+    {
+      digitalWrite(EN, LOW);
+      digitalWrite(X_STP, xStep);
+      digitalWrite(Y_STP, yStep);
+      
+      // Debug: Visualise motion    
+      //  if      (xDir==false && yDir==false) Serial.print(">");
+      //  else if (xDir==true  && yDir==true ) Serial.print("<");
+      //  else if (xDir==false && yDir==true ) Serial.print("l");
+      //  else if (xDir==true  && yDir==false) Serial.print("r");
+      
+      steps--;
+  
+      // command is now completely processed
+      if(steps==0) nextInQueue();  
+    } 
+  }
+  TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
+    
 }
 
 
