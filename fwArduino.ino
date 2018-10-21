@@ -46,8 +46,9 @@ const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMET
 const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
 
 
-speedController speedy;
-const unsigned long int DEFAULT_INTERVAL_us     = 100; //  faster intervals were not working
+// time parameters
+const unsigned int BASE_CLK_us = 100; //  faster intervals were not working
+speedController speedy(BASE_CLK_us);
 unsigned long int ticks = 0; // every tick, the timer function is called
 
 
@@ -78,7 +79,7 @@ void setup()
   Serial.println(STEPS_PER_M);
   Serial.println(STEPS_PER_TURN);
 
- TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
+ TimerLib.setTimeout_us(timed_function, BASE_CLK_us);
 }
 
 
@@ -252,9 +253,8 @@ void move(String distance, String direction, String speed)
     }
   
     int steps = distance.toInt(); // todo skalieren ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
-    UartToESP.print("speed: ");
-    UartToESP.println(speed.toInt());
-    speedy.go(steps, speed.toInt() );       
+    ticks = 0;
+    speedy.go(steps, speed.toInt() );  
     Serial.println();     
   }
 
@@ -295,6 +295,7 @@ void turn(String degree, String direction, String speed)
     else // start motion
     {
       int steps = degree.toInt(); // todo faktor ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600 * 2;
+      ticks = 0;
       speedy.go(steps, speed.toInt() );  
       Serial.println();
     }
@@ -353,7 +354,7 @@ void timed_function()
     if( !speedy.stepLeft() ) nextInQueue();  
   }  
 
-  TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
+  TimerLib.setTimeout_us(timed_function, BASE_CLK_us);
 }
 
 

@@ -12,13 +12,14 @@ class speedController
 {
     private:
 
-    uint32_t m_steps;
-    float m_interval;
-    bool m_first;     // perform first step after go() at next call of isNextStep()
-
+    const unsigned int m_baseClk_us;
+    uint32_t m_interval; // [ticks]
+    uint32_t m_steps;    
+    bool m_first;        // perform first step after go() at next call of isNextStep()
+ 
     public:
     
-    speedController( );
+    speedController(unsigned int baseClk_us );
 
     // Returns the time to the next Step in ticks
     // ticks - number of ticks since last step todo handle overflow
@@ -38,9 +39,9 @@ class speedController
         else return false; 
         };
 
-    // Set maximum acceleration that is usualle the constant acceleration 
+    // Set maximum acceleration that is usually the constant acceleration 
     // used while ramp up and ramp down
-    void setMaxAcceleration( uint32_t maxAcceleration );
+    void setMaxAcceleration( uint32_t maxAcceleration ) { };
 
     // Start the Motion with ramp up
     // steps - number of steps to go
