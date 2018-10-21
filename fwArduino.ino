@@ -11,6 +11,7 @@
  
 #include <SoftwareSerial.h>
 #include <uTimerLib.h>
+#include "speedController.h"
 
 
 
@@ -45,18 +46,14 @@ const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMET
 const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
 
 
-const unsigned long int DEFAULT_RAMP_UP_TIME_ms = 2000;
-const unsigned long int DEFAULT_INTERVAL_us     = 1000;
+speedController speedy;
+const unsigned long int DEFAULT_INTERVAL_us     = 500000;
 int ticks = 0; // every tick, the timer function is called
-int tacks = 0; // only at tack a step is executed
 
 
 // Motor Parameters
 bool xDir;
 bool yDir;
-bool xStep;
-bool yStep;
-int  steps;
 
 
 
@@ -81,7 +78,7 @@ void setup()
   Serial.println(STEPS_PER_M);
   Serial.println(STEPS_PER_TURN);
 
-  steps = 0;
+ TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
 }
 
 
@@ -100,10 +97,7 @@ void processInput()
         inputString += inChar;
       }
       else
-      {   
-        Serial.print("Robert schickt: ");
-        Serial.println(inputString);
-               
+      {                  
         // split string at ":" to get command
         int endOfCmd = inputString.indexOf(":");
         String cmd = inputString.substring(0,endOfCmd); 
@@ -206,7 +200,7 @@ void stop()
 {
   debugOut("stop");
   digitalWrite(EN, HIGH);
-  steps=0;
+  speedy.stop();
 }
 
 
@@ -257,9 +251,12 @@ void move(String distance, String direction, String speed)
       yDir = true;
     }
   
-    steps = ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
-    timed_function();
+    int steps = distance.toInt(); // todo skalieren ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
+    speedy.go(steps, speed.toInt() );       
+    Serial.println();     
   }
+
+  
 }
 
 
@@ -295,8 +292,9 @@ void turn(String degree, String direction, String speed)
     }
     else // start motion
     {
-      int steps = ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600 * 2;
-      timed_function();  
+      int steps = degree.toInt(); // todo faktor ( STEPS_PER_TURN * (unsigned long int)abs(degree.toInt()) ) / 3600 * 2;
+      speedy.go(steps, speed.toInt() );  
+      Serial.println();
     }
 }
 
@@ -322,66 +320,41 @@ void nextInQueue()
 }
 
 
+void performStep()
+{
+  // direction
+  digitalWrite(X_DIR, xDir);
+  digitalWrite(Y_DIR, yDir);
+
+  digitalWrite(EN, LOW);
+  digitalWrite(X_STP, HIGH);
+  digitalWrite(Y_STP, HIGH);    
+}
+
 /**
  * timed_function
  */
 void timed_function() 
-{  
-  if(steps==0)
-  {
-    ticks = tacks = 0;
-    return;
-  }
-  
-  ticks++;
-  int t = (DEFAULT_RAMP_UP_TIME_ms/ticks);
+{    
+  // todo reicht ein us für das step signal???
+  digitalWrite(X_STP, LOW);
+  digitalWrite(Y_STP, LOW);
 
-  //  UartToESP.print("ticks ");
-  //  UartToESP.print(ticks);
-  //  UartToESP.print(" tacks ");
-  //  UartToESP.print(tacks);
-  //  UartToESP.print(" t ");
-  //  UartToESP.println(t);
-  
-  if(tacks < t )
-  {
-    tacks++;
-  }
-  else
-  {  
-    // UartToESP.println(tacks);
-    tacks = 0;
+  if(ticks%100==0) Serial.println();
+ 
+  ticks++;
+  if( speedy.timeToNextStep(ticks) <= 1 )
+  {    
+    Serial.print("s");
     
-    // direction
-    digitalWrite(X_DIR, xDir);
-    digitalWrite(Y_DIR, yDir);
-  
-    // full speed
-    xStep=!xStep;
-    yStep=!yStep;  
-    
-  
-    // decrease distance
-    if(steps>0) 
-    {
-      digitalWrite(EN, LOW);
-      digitalWrite(X_STP, xStep);
-      digitalWrite(Y_STP, yStep);
-      
-      // Debug: Visualise motion    
-      //  if      (xDir==false && yDir==false) Serial.print(">");
-      //  else if (xDir==true  && yDir==true ) Serial.print("<");
-      //  else if (xDir==false && yDir==true ) Serial.print("l");
-      //  else if (xDir==true  && yDir==false) Serial.print("r");
-      
-      steps--;
-  
-      // command is now completely processed
-      if(steps==0) nextInQueue();  
-    } 
+    ticks = 0;
+    performStep();
+    speedy.step();
+    if( !speedy.stepLeft() ) nextInQueue();  
   }
+  else  Serial.print(".");
+
   TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
-    
 }
 
 
