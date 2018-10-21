@@ -47,8 +47,8 @@ const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) /
 
 
 speedController speedy;
-const unsigned long int DEFAULT_INTERVAL_us     = 500000;
-int ticks = 0; // every tick, the timer function is called
+const unsigned long int DEFAULT_INTERVAL_us     = 100; //  faster intervals were not working
+unsigned long int ticks = 0; // every tick, the timer function is called
 
 
 // Motor Parameters
@@ -252,6 +252,8 @@ void move(String distance, String direction, String speed)
     }
   
     int steps = distance.toInt(); // todo skalieren ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
+    UartToESP.print("speed: ");
+    UartToESP.println(speed.toInt());
     speedy.go(steps, speed.toInt() );       
     Serial.println();     
   }
@@ -304,7 +306,7 @@ void turn(String degree, String direction, String speed)
  * move elements in cmd queue and start processing of first element
  */
 void nextInQueue()
-{      
+{        
   // move elements in queue
   for(int i=0; i<cmdIndex; i++) cmdQueue[i]=cmdQueue[i+1];
   cmdIndex--;
@@ -339,20 +341,17 @@ void timed_function()
   // todo reicht ein us für das step signal???
   digitalWrite(X_STP, LOW);
   digitalWrite(Y_STP, LOW);
-
-  if(ticks%100==0) Serial.println();
- 
   ticks++;
-  if( speedy.timeToNextStep(ticks) <= 1 )
+  if( speedy.isNextStep(ticks) )
   {    
-    Serial.print("s");
+    Serial.print(ticks);
+    Serial.println(", ");
     
     ticks = 0;
     performStep();
     speedy.step();
     if( !speedy.stepLeft() ) nextInQueue();  
-  }
-  else  Serial.print(".");
+  }  
 
   TimerLib.setTimeout_us(timed_function, DEFAULT_INTERVAL_us);
 }

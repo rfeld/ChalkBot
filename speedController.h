@@ -13,14 +13,20 @@ class speedController
     private:
 
     uint32_t m_steps;
+    float m_interval;
+    bool m_first;     // perform first step after go() at next call of isNextStep()
 
     public:
     
     speedController( );
 
     // Returns the time to the next Step in ticks
-    // ticks - number of Microseconds since last step todo handle overflow
-    int32_t timeToNextStep( uint32_t ticks );
+    // ticks - number of ticks since last step todo handle overflow
+    int32_t timeToNextStep( uint32_t ticks ) {};
+
+    // Returns if next step is due
+    // ticks - number of ticks since last step has been performed todo handle overflow
+    bool isNextStep(uint32_t ticks );
 
     // Inform class that step has been made
     void step() { m_steps--; };
@@ -42,7 +48,8 @@ class speedController
     //         The maximum speed, that will actually be reached after ramp up, is
     //         limited by maximum accelaration and number of steps if the ramp up can not
     //         be completed before the ramp down has to start.
-    void go( uint32_t steps , uint32_t speed ) { m_steps = steps; };
+    //         Allowed range 1 to 1000
+    void go( uint32_t steps , uint32_t speed );
 
     // Stop immediately
     void stop() { m_steps = 0; };
