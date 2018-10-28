@@ -15,7 +15,6 @@
 
 
 
-// ESP/Wifi communication
 SoftwareSerial UartToESP(11,10); // Rx, Tx
 String inputString = "";
 
@@ -47,7 +46,7 @@ const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) /
 
 
 // time parameters
-const unsigned int BASE_CLK_us = 100; //  faster intervals were not working
+const unsigned int BASE_CLK_us = 5000; //  faster intervals were not working
 speedController speedy(BASE_CLK_us);
 unsigned long int ticks = 0; // every tick, the timer function is called
 
@@ -112,7 +111,7 @@ void processInput()
           UartToESP.println(MAX_CMDS);
           cmdIndex=0;          
         }
-        else if( cmd=="move" || cmd=="turn" || cmd=="stepper" || cmd=="chalk" || cmd=="version" )
+        else if( cmd=="move" || cmd=="turn" || cmd=="stepper" || cmd=="acc" || cmd=="chalk" || cmd=="version" )
         {          
           // add to command queue
           if(cmdIndex<MAX_CMDS) 
@@ -135,9 +134,13 @@ void processInput()
         {
           String answer = "ERR: ";
           answer+= INVALID_CMD;
-          answer+= ", invalid command";
+          answer+= ", invalid command ";
+          answer += cmd;
           stop();
-          UartToESP.println(answer);             
+          UartToESP.println(answer);  
+
+          // clear queue
+          
         }
        // clear for new input
         inputString = "";
@@ -179,13 +182,14 @@ void processCmd(String input)
     else if(cmd=="move")    move(params[0], params[1], params[2]);
     else if(cmd=="turn")    turn(params[0], params[1], params[2]);
     else if(cmd=="stepper") stepperEnable(params[0]);
+    else if(cmd=="acc")     { speedy.setMaxAcceleration(params[0].toInt()); nextInQueue(); }
     else if(cmd=="chalk")   Serial.println("chalk");
     else if(cmd=="version") Serial.println("version");
     else
     {
       String answer = "ERR: ";
       answer+= INVALID_CMD;
-      answer+= ", invalid command";
+      answer+= ", trying to process invalid command ";
       UartToESP.println(answer); 
   
       // remove from command queue
@@ -254,8 +258,8 @@ void move(String distance, String direction, String speed)
   
     int steps = distance.toInt(); // todo skalieren ( STEPS_PER_M * (unsigned long int)abs(distance.toInt()) ) / 1000 * 2;    
     ticks = 0;
-    speedy.go(steps, speed.toInt() );  
-    Serial.println();     
+    Serial.print("target Interval: ");
+    Serial.println(speedy.go(steps, speed.toInt() ));     
   }
 
   
@@ -342,7 +346,9 @@ void timed_function()
   // todo reicht ein us für das step signal???
   digitalWrite(X_STP, LOW);
   digitalWrite(Y_STP, LOW);
+  
   ticks++;
+
   if( speedy.isNextStep(ticks) )
   {    
     Serial.print(ticks);

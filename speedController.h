@@ -13,8 +13,11 @@ class speedController
     private:
 
     const unsigned int m_baseClk_us;
-    uint32_t m_interval; // [ticks]
+    uint32_t m_interval;       // [ticks]
+    uint32_t m_targetInterval; // [ticks] 1/target speed
+    uint32_t m_acc;
     uint32_t m_steps;    
+    uint32_t m_cumTicks;
     bool m_first;        // perform first step after go() at next call of isNextStep()
  
     public:
@@ -41,7 +44,7 @@ class speedController
 
     // Set maximum acceleration that is usually the constant acceleration 
     // used while ramp up and ramp down
-    void setMaxAcceleration( uint32_t maxAcceleration ) { };
+    void setMaxAcceleration( uint32_t maxAcceleration ) { m_acc = maxAcceleration; };
 
     // Start the Motion with ramp up
     // steps - number of steps to go
@@ -50,7 +53,7 @@ class speedController
     //         limited by maximum accelaration and number of steps if the ramp up can not
     //         be completed before the ramp down has to start.
     //         Allowed range 1 to 1000
-    void go( uint32_t steps , uint32_t speed );
+    uint32_t go( uint32_t steps , uint32_t speed );
 
     // Stop immediately
     void stop() { m_steps = 0; };
