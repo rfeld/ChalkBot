@@ -1,13 +1,12 @@
+// Chalkbot 2018
+
+#include "inttypes.h" // now types like uint32_t can be used.
+
 // Speed Controller:
 // This class manages the state of the Chalk bot in terms of 
 // * speed
 // * acceleration
 // * deceleration
-
-// ToDo: Das sollte auf PC und Arduino der selbe Datentyp sein (32Bit unsigned)
-typedef unsigned long int uint32_t;
-typedef          long int  int32_t;
-
 class speedController
 {
     private:
