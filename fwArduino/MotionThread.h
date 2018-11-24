@@ -4,7 +4,7 @@ class MotionThread
 {
 public:
 
-  void start(int steps, bool dir, int speed_sps);
+  void start(int steps, bool dir, int speed_sps, float accFactor);
 
   static void stop();
 
@@ -17,15 +17,25 @@ private:
 
   static void pulseEnd();
 
+  static unsigned long int rampUp();
+
+  
+
   static bool moving;
   
   static int step;
   
   static bool abortMotion;
 
-  static int stepInterval;
-
   static const int pulseWidth = 100;
+
+  static float acc;
+
+  static unsigned long int stepInterval;
+
+  static unsigned long int currentSpeed_sps;
+  
+  static unsigned long int targetSpeed_sps;
 
 };
 

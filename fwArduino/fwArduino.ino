@@ -20,6 +20,7 @@ String inputString = "";
 bool startStop = false;
 int dir = true;
 int speed_sps = 100;
+float accFactor = 1.2;
 
 MotionThread motionThread;
 
@@ -62,11 +63,34 @@ void processInput()
         inputString += inChar;
       }
       else
-      {   
-        inputString.trim();        
-        if(inputString=="start") startStop = true;
-        else if(inputString.toInt() != 0) speed_sps = inputString.toInt();
-        else                     startStop = false;
+      {  
+        // split string at ":" to get command
+        int endOfCmd = inputString.indexOf(":");
+        String cmd = inputString.substring(0,endOfCmd); 
+        cmd.trim();
+        
+        if(cmd=="start") 
+        {
+          startStop = true;
+        }
+        else if(cmd=="v") 
+        {
+          int newSpeed = inputString.substring(endOfCmd+1,-1).toInt();
+          if(newSpeed > 0 && newSpeed < 250) speed_sps = newSpeed;
+          Serial.print("speed: ");
+          Serial.println(speed_sps);
+        }
+        else if(cmd=="a") 
+        {
+          float newAcc = inputString.substring(endOfCmd+1,-1).toFloat();
+          if(newAcc >= 1.1) accFactor = newAcc;
+          Serial.print("acc: ");
+          Serial.println(accFactor);
+        }
+        else
+        {
+          startStop = false;
+        }
                                     
         // clear for new input
         inputString = "";
@@ -92,7 +116,7 @@ void loop()
   {
     UartToESP.println("toggle direction");
     dir = !dir;
-    motionThread.start(200, dir, speed_sps);
+    motionThread.start(200, dir, speed_sps, accFactor);
   }
   if(!startStop)
   {

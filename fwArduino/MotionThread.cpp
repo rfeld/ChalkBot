@@ -4,17 +4,22 @@
 #include "MotionThread.h"
 #include <uTimerLib.h>
 #include "definitions.h"
+#include <SoftwareSerial.h>
 
 bool MotionThread::abortMotion = false;
 int  MotionThread::step = 0;
 bool MotionThread::moving = false;
-int  MotionThread::stepInterval = 10000;
+float MotionThread::acc = 1.1;
+unsigned long int  MotionThread::stepInterval = 10000;
+unsigned long int  MotionThread::currentSpeed_sps = 10;
+unsigned long int  MotionThread::targetSpeed_sps  = 100;
+
 
 
 /////////////////////////////////////////////////////////
 // start
 /////////////////////////////////////////////////////////
-void MotionThread::start(int steps, bool dir, int speed_sps)
+void MotionThread::start(int steps, bool dir, int speed_sps, float accFactor)
 {
   moving = true;
   abortMotion  = false;
@@ -33,7 +38,13 @@ void MotionThread::start(int steps, bool dir, int speed_sps)
   digitalWrite(EN, LOW);
 
   step = steps;
-  stepInterval = 1000000/speed_sps;
+
+  currentSpeed_sps = 10;
+  targetSpeed_sps  = speed_sps;
+
+  acc = accFactor;
+  
+  stepInterval = 1000000/currentSpeed_sps;
 
   pulseStart(); 
 }
@@ -71,10 +82,28 @@ static void MotionThread::pulseEnd()
   digitalWrite(X_STP, HIGH);
   digitalWrite(Y_STP, HIGH);
 
+  stepInterval = rampUp();
+
   step--;
   if(abortMotion || step<=0) stop();
   else      TimerLib.setTimeout_us(pulseStart, (stepInterval-pulseWidth) );
   
+}
+
+
+/////////////////////////////////////////////////////////
+// rampUp
+/////////////////////////////////////////////////////////
+static unsigned long int MotionThread::rampUp()
+{ 
+  if(currentSpeed_sps<targetSpeed_sps)
+  {
+    currentSpeed_sps = currentSpeed_sps * acc;
+  }
+
+  if(currentSpeed_sps>targetSpeed_sps) currentSpeed_sps = targetSpeed_sps;
+
+  return (1000000/currentSpeed_sps);
 }
 
 
