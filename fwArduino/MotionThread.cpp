@@ -8,12 +8,13 @@
 bool MotionThread::abortMotion = false;
 int  MotionThread::step = 0;
 bool MotionThread::moving = false;
+int  MotionThread::stepInterval = 10000;
 
 
 /////////////////////////////////////////////////////////
 // start
 /////////////////////////////////////////////////////////
-void MotionThread::start(int steps, bool dir)
+void MotionThread::start(int steps, bool dir, int speed_sps)
 {
   moving = true;
   abortMotion  = false;
@@ -32,6 +33,7 @@ void MotionThread::start(int steps, bool dir)
   digitalWrite(EN, LOW);
 
   step = steps;
+  stepInterval = 1000000/speed_sps;
 
   pulseStart(); 
 }
@@ -57,7 +59,7 @@ static void MotionThread::pulseStart()
   digitalWrite(X_STP, LOW);
   digitalWrite(Y_STP, LOW);
   if(abortMotion) stop();
-  else            TimerLib.setTimeout_us(pulseEnd, 100);  
+  else            TimerLib.setTimeout_us(pulseEnd, pulseWidth);  
 }
 
 
@@ -71,7 +73,7 @@ static void MotionThread::pulseEnd()
 
   step--;
   if(abortMotion || step<=0) stop();
-  else      TimerLib.setTimeout_us(pulseStart, 10000);
+  else      TimerLib.setTimeout_us(pulseStart, (stepInterval-pulseWidth) );
   
 }
 

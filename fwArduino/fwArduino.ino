@@ -19,6 +19,7 @@ String inputString = "";
 
 bool startStop = false;
 int dir = true;
+int speed_sps = 100;
 
 MotionThread motionThread;
 
@@ -64,6 +65,7 @@ void processInput()
       {   
         inputString.trim();        
         if(inputString=="start") startStop = true;
+        else if(inputString.toInt() != 0) speed_sps = inputString.toInt();
         else                     startStop = false;
                                     
         // clear for new input
@@ -90,7 +92,7 @@ void loop()
   {
     UartToESP.println("toggle direction");
     dir = !dir;
-    motionThread.start(200, dir);
+    motionThread.start(200, dir, speed_sps);
   }
   if(!startStop)
   {
