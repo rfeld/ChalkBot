@@ -6,6 +6,11 @@ const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMET
 const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
 
 
-// time parameters
-const unsigned int BASE_CLK_us = 5000; //  faster intervals were not working
-unsigned long int ticks = 0; // every tick, the timer function is called
+
+// GPIO definitions
+#define EN        8       //The step motor makes the power end, low level is effective
+#define X_DIR     5       //The x-axis moves in the direction of the motor
+#define Y_DIR     6       //The y-axis moves in the direction of the motor
+#define X_STP     2       //The x axis stepper control
+#define Y_STP     3       //The y axis stepper control
+
