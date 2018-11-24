@@ -30,6 +30,7 @@ String inputString = "";
 bool startStop = false;
 bool moving = false;
 int step = 0;
+int dir = true;
 bool abortMotion = true;
 
 /**
@@ -40,6 +41,8 @@ void setup()
   // set up the IO tube feet used by the motor to be set to output
   pinMode(X_DIR, OUTPUT); pinMode(X_STP, OUTPUT);
   pinMode(Y_DIR, OUTPUT); pinMode(Y_STP, OUTPUT);
+  digitalWrite(X_DIR, LOW);
+  digitalWrite(Y_DIR, LOW);
   pinMode(EN, OUTPUT);
 
   // Prepare to use the LED
@@ -50,7 +53,7 @@ void setup()
   Serial.begin(115200);
   UartToESP.begin(9600);
 
-  Serial.println("started");
+  UartToESP.println("started");
 }
 
 
@@ -69,12 +72,10 @@ void processInput()
       }
       else
       {   
-
-        Serial.println("toggle move");
-                               
-        // received one line: toggle startStop
-        startStop = !startStop;        
-        
+        inputString.trim();        
+        if(inputString=="start") startStop = true;
+        else                     startStop = false;
+                                    
         // clear for new input
         inputString = "";
       }
@@ -100,43 +101,43 @@ void motionThread_start(int steps, bool dir)
 
   if(dir)
   {
-    digitalWrite(X_STP, LOW);
-    digitalWrite(Y_STP, LOW);
+    UartToESP.println("dir LOW");
+    digitalWrite(X_DIR, LOW);
+    digitalWrite(Y_DIR, LOW);
   }
   else
   {
-    digitalWrite(X_STP, HIGH);
-    digitalWrite(Y_STP, HIGH);
+    UartToESP.println("dir HIGH");
+    digitalWrite(X_DIR, HIGH);
+    digitalWrite(Y_DIR, HIGH);
   }
   
   digitalWrite(EN, LOW);
 
   step = steps;
 
-  motionThread_LOW();
+  motionThread_pulseStart();
   
 }
 
 
-void motionThread_LOW()
+void motionThread_pulseStart()
 {
   digitalWrite(X_STP, LOW);
   digitalWrite(Y_STP, LOW);
   if(abortMotion) motionThread_stop();
-  else      TimerLib.setTimeout_us(motionThread_HIGH, 10000);  
+  else            TimerLib.setTimeout_us(motionThread_pulseEnd, 100);  
 }
 
 
-void motionThread_HIGH() 
+void motionThread_pulseEnd() 
 {      
   digitalWrite(X_STP, HIGH);
   digitalWrite(Y_STP, HIGH);
 
-  Serial.println(step);
-  
   step--;
   if(abortMotion || step<=0) motionThread_stop();
-  else      TimerLib.setTimeout_us(motionThread_LOW, 10000);
+  else      TimerLib.setTimeout_us(motionThread_pulseStart, 10000);
   
 }
 
@@ -146,19 +147,17 @@ void motionThread_HIGH()
  * main loop
  */
 void loop()
-{
-  
+{  
   // check for data from ESP/WiFi
   if (UartToESP.available() > 0) processInput();
-
 
   // sobald die eine Bewegung beendet ist, wird die Richtung gewechselt
   // und wieder ine Bewegung in die andere Richtung gestartet. Immer je 
   // eine Umdrehung (200 Schritte)
-  int dir = true;
   if(!moving && startStop)
   {
-    dir != dir;
+    UartToESP.println("toggle direction");
+    dir = !dir;
     motionThread_start(200, dir);
   }
   if(!startStop)
