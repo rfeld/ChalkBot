@@ -82,7 +82,7 @@ static void MotionThread::pulseEnd()
   digitalWrite(X_STP, HIGH);
   digitalWrite(Y_STP, HIGH);
 
-  stepInterval = rampUp();
+  stepInterval = rampUp_lin();
 
   step--;
   if(abortMotion || step<=0) stop();
@@ -92,9 +92,9 @@ static void MotionThread::pulseEnd()
 
 
 /////////////////////////////////////////////////////////
-// rampUp
+// rampUp_exp
 /////////////////////////////////////////////////////////
-static unsigned long int MotionThread::rampUp()
+static unsigned long int MotionThread::rampUp_exp()
 { 
   if(currentSpeed_sps<targetSpeed_sps)
   {
@@ -105,6 +105,23 @@ static unsigned long int MotionThread::rampUp()
 
   return (1000000/currentSpeed_sps);
 }
+
+
+/////////////////////////////////////////////////////////
+// rampUp_lin
+/////////////////////////////////////////////////////////
+static unsigned long int MotionThread::rampUp_lin()
+{ 
+  if(currentSpeed_sps<targetSpeed_sps)
+  {
+    currentSpeed_sps = currentSpeed_sps + acc;
+  }
+
+  if(currentSpeed_sps>targetSpeed_sps) currentSpeed_sps = targetSpeed_sps;
+
+  return (1000000/currentSpeed_sps);
+}
+
 
 
 #endif // MOTIONTHREAD_H

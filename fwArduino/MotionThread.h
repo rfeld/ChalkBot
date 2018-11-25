@@ -17,7 +17,9 @@ private:
 
   static void pulseEnd();
 
-  static unsigned long int rampUp();
+  static unsigned long int rampUp_exp();
+
+  static unsigned long int rampUp_lin();
 
   
 

@@ -99,15 +99,8 @@ void processInput()
 }
 
 
-
-
-/**
- * main loop
- */
-void loop()
-{  
-  // check for data from ESP/WiFi
-  if (UartToESP.available() > 0) processInput();
+void testMove()
+{
 
   // sobald die eine Bewegung beendet ist, wird die Richtung gewechselt
   // und wieder ine Bewegung in die andere Richtung gestartet. Immer je 
@@ -122,6 +115,19 @@ void loop()
   {
     motionThread.stop();
   }
+}
+
+
+
+/**
+ * main loop
+ */
+void loop()
+{  
+  // check for data from ESP/WiFi
+  if (UartToESP.available() > 0) processInput();
+
+  testMove();
   
 }
 
