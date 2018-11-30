@@ -1,9 +1,9 @@
 /**
- * Test branch für den Chalkbot der ihn rechtsrum - linksrum fahren lässt
- * 
- * \author Birgit Feld
- * \date 2018
- */
+   FW für den Chalkbot
+
+   \author Birgit Feld
+   \date 2018
+*/
 
 
 #include "definitions.h"
@@ -14,19 +14,36 @@
 
 
 
-SoftwareSerial UartToESP(11,10); // Rx, Tx
+SoftwareSerial UartToESP(11, 10); // Rx, Tx
 String inputString = "";
+
+// communication protocoll parameters
+const unsigned int  MAX_CMDS = 5;
+String              cmdQueue[MAX_CMDS];
+unsigned int        cmdIndex=0;
+enum ErrorCode {  
+  NO_ERROR = 0,
+  INVALID_CMD,
+  INVALID_PARAMETER,
+  CMD_QUEUE_FULL,
+  SW_ERROR
+};
+
+
 
 bool startStop = false;
 int dir = true;
 int speed_sps = 100;
 float accFactor = 1.2;
 
+
 MotionThread motionThread;
 
-/**
- * setup
- */
+
+
+/** ********************************************************
+   setup
+************************************************************ */
 void setup()
 {
   // set up the IO tube feet used by the motor to be set to output
@@ -37,10 +54,10 @@ void setup()
   pinMode(EN, OUTPUT);
 
   // Prepare to use the LED
-  pinMode(13,OUTPUT);
-  
+  pinMode(13, OUTPUT);
+
   digitalWrite(EN, HIGH);
-  
+
   Serial.begin(115200);
   UartToESP.begin(9600);
 
@@ -49,86 +66,180 @@ void setup()
 }
 
 
-/**
- * Parse the WIFI input 
- */
+
+
+/** ********************************************************
+   Parse the WIFI input
+************************************************************ */
 void processInput()
 {
-    // read everything currently available
-    while (UartToESP.available()) 
+  // read everything currently available
+  while (UartToESP.available())
+  {
+    // complete line received
+    char inChar = (char)UartToESP.read();
+    if (inChar == '\n')
     {
-      char inChar = (char)UartToESP.read();      
-      if (inChar != '\n') 
+      // split string at ":" to get command
+      int endOfCmd = inputString.indexOf(":");
+      String cmd = inputString.substring(0, endOfCmd);
+      cmd.trim();
+
+      // stop
+      if (cmd == "stop")
       {
-        inputString += inChar;
-      }
-      else
-      {  
-        // split string at ":" to get command
-        int endOfCmd = inputString.indexOf(":");
-        String cmd = inputString.substring(0,endOfCmd); 
-        cmd.trim();
-        
-        if(cmd=="start") 
+        motionThread.stop();
+        UartToESP.print("ACK: ");
+        UartToESP.println(MAX_CMDS);
+        cmdIndex = 0;
+      }      
+      // for command queue
+      else if ( cmd == "move" || cmd == "turn" || cmd == "stepper" || cmd == "chalk" )
+      {
+        if (cmdIndex < MAX_CMDS)
         {
-          startStop = true;
-        }
-        else if(cmd=="v") 
-        {
-          int newSpeed = inputString.substring(endOfCmd+1,-1).toInt();
-          if(newSpeed > 0 && newSpeed < 250) speed_sps = newSpeed;
-          Serial.print("speed: ");
-          Serial.println(speed_sps);
-        }
-        else if(cmd=="a") 
-        {
-          float newAcc = inputString.substring(endOfCmd+1,-1).toFloat();
-          if(newAcc >= 1.1) accFactor = newAcc;
-          Serial.print("acc: ");
-          Serial.println(accFactor);
+          cmdQueue[cmdIndex++] = inputString;
+          UartToESP.print("ACK: ");
+          UartToESP.println(MAX_CMDS - cmdIndex);
         }
         else
         {
-          startStop = false;
+          String answer = "ERR: ";
+          answer += CMD_QUEUE_FULL;
+          answer += ", cmd queue full";
+          UartToESP.println( answer );
         }
-                                    
-        // clear for new input
-        inputString = "";
+      }      
+      // invalid command
+      else
+      {
+        String answer = "ERR: ";
+        answer += INVALID_CMD;
+        answer += ", invalid command ";
+        answer += cmd;
+        motionThread.stop();
+        UartToESP.println(answer);
+        cmdIndex = 0;
       }
-  }  
+
+      // clear for new input
+      inputString = "";
+    }
+    else
+    {
+      inputString += inChar;
+    }
+  }
 }
 
-
-void testMove()
+/** ********************************************************
+ * processQueue sets the new motion parameters
+ * \param input contains command and parameters
+************************************************************ */
+void processQueue(String input)
 {
+    UartToESP.println("processQueue()");
+  
+    if(motionThread.isMoving()) 
+    {
+      String answer = "ERR: ";
+      answer+= SW_ERROR;
+      answer+= ", trying to start motion thread, though still moving";
+      UartToESP.println(answer); 
+      return;
+    }
+  
+    // split string at ":" to get command
+    int endOfCmd = input.indexOf(":");
+    String cmd = input.substring(0,endOfCmd); 
+    cmd.trim(); 
+    
+    // split string at "," to get parameters    
+    const int MAX_PARAMS = 4;
+    String params[MAX_PARAMS];   
+    int from = endOfCmd+1;
+    for(int i=0; i<MAX_PARAMS; i++)
+    {
+      params[i] = "";
+      if(from>0)
+      {
+        int endOfParam = input.indexOf(",", from);            
+        params[i] = input.substring(from,endOfParam);           
+        params[i].trim();
+        from = endOfParam+1;
+      }                   
+    }
+    
+    // list of all valid commands
+    if     (cmd=="move")    move(false, params[0], params[1], params[2], params[3]);
+    else if(cmd=="turn")    move(true,  params[0], params[1], params[2], params[3]);
+//  else if(cmd=="stepper") stepperEnable(params[0]); // tbd
+//  else if(cmd=="chalk")   Serial.println("chalk");  // tbd
+    else
+    {
+      String answer = "ERR: ";
+      answer+= INVALID_CMD;
+      answer+= ", trying to process invalid command in queue";
+      UartToESP.println(answer); 
+    }
+  
+}
 
-  // sobald die eine Bewegung beendet ist, wird die Richtung gewechselt
-  // und wieder ine Bewegung in die andere Richtung gestartet. Immer je 
-  // eine Umdrehung (200 Schritte)
-  if(!motionThread.isMoving() && startStop)
+/** ********************************************************
+ *  move
+************************************************************ */
+void move(bool turn, String distance, String speed, String acc, String rampType)
+{
+  UartToESP.println("move()");
+  
+  if(distance.toInt() == 0)
   {
-    UartToESP.println("toggle direction");
-    dir = !dir;
-    motionThread.start(200, dir, speed_sps, accFactor);
+    UartToESP.print("ERR: ");
+    UartToESP.print(INVALID_PARAMETER);
+    UartToESP.println(", invalid distance");
+    return;
   }
-  if(!startStop)
-  {
-    motionThread.stop();
-  }
+
+  // for all other parameters use old value if not set correctly
+  if(speed.toInt() > 0 && speed.toInt() < 300)  speed_sps = speed.toInt(); 
+  if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
+  if(rampType == "lin" || rampType == "exp" )   ; // tbd - currently ignored
+
+  motionThread.start(turn, distance.toInt(), speed_sps, accFactor);
 }
 
 
 
-/**
- * main loop
- */
+
+/** ********************************************************
+ *  nextInQueue
+************************************************************ */
+void nextInQueue()
+{          
+  processQueue(cmdQueue[0]);
+  
+  // move elements in queue
+  for(int i=0; i<cmdIndex; i++) cmdQueue[i]=cmdQueue[i+1];
+  cmdIndex--;
+
+  UartToESP.print("DONE: ");
+  UartToESP.println(MAX_CMDS-cmdIndex);
+}
+
+
+
+
+
+/** ********************************************************
+   main loop
+************************************************************ */
 void loop()
-{  
+{
   // check for data from ESP/WiFi
   if (UartToESP.available() > 0) processInput();
 
-  testMove();
-  
+  if(cmdIndex>0 && !motionThread.isMoving()) nextInQueue();
+
 }
 
 

@@ -4,7 +4,7 @@ class MotionThread
 {
 public:
 
-  void start(int steps, bool dir, int speed_sps, float accFactor);
+  void start(bool turn, int steps, int speed_sps, float accFactor);
 
   static void stop();
 

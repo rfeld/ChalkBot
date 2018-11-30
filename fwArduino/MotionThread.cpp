@@ -19,23 +19,20 @@ unsigned long int  MotionThread::targetSpeed_sps  = 100;
 /////////////////////////////////////////////////////////
 // start
 /////////////////////////////////////////////////////////
-void MotionThread::start(int steps, bool dir, int speed_sps, float accFactor)
+void MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 {
   moving = true;
   abortMotion  = false;
 
-  if(dir)
-  {    
-    digitalWrite(X_DIR, LOW);
-    digitalWrite(Y_DIR, LOW);
-  }
-  else
-  {
-    digitalWrite(X_DIR, HIGH);
-    digitalWrite(Y_DIR, HIGH);
-  }
+  if(steps<0 && turn)  {  digitalWrite(X_DIR, LOW);   digitalWrite(Y_DIR, LOW);  }
+  if(steps>0 && turn)  {  digitalWrite(X_DIR, HIGH);  digitalWrite(Y_DIR, HIGH); }
+  if(steps<0 && !turn) {  digitalWrite(X_DIR, LOW);   digitalWrite(Y_DIR, HIGH); }
+  if(steps>0 && !turn) {  digitalWrite(X_DIR, HIGH);  digitalWrite(Y_DIR, LOW);  }
+  // if steps = 0, don't care about direction, it is not moving anyway
   
   digitalWrite(EN, LOW);
+
+  if(steps<0)steps=-steps;
 
   step = steps;
 
