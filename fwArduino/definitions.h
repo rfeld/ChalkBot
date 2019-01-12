@@ -1,9 +1,9 @@
 // Wheel, Car and Stepper dimensions
-const unsigned long int WHEEL_DIAMETER = 105; // [mm]
-const unsigned long int WHEEL_DISTANCE = 240; // [mm] distance between the wheels
-const unsigned long int STEPS_PER_ROTATION = 200; // full circle of one wheel
-const unsigned long int STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMETER * PI );
-const unsigned long int STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
+const int32_t WHEEL_DIAMETER = 103; // [mm]
+const int32_t WHEEL_DISTANCE = 247; // [mm] distance between the wheels
+const int32_t STEPS_PER_ROTATION = 200; // full circle of one wheel
+const int32_t STEPS_PER_M = 1000 * STEPS_PER_ROTATION / ( WHEEL_DIAMETER * PI );
+const int32_t STEPS_PER_TURN =  STEPS_PER_M * (WHEEL_DISTANCE * PI ) / 1000;
 
 
 

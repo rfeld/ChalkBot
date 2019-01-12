@@ -11,6 +11,7 @@
 #include <uTimerLib.h>
 #include "speedController.h"
 #include "MotionThread.h"
+#include "inttypes.h" // now types like uint32_t can be used.
 
 
 
@@ -188,11 +189,11 @@ void processQueue(String input)
 /** ********************************************************
  *  move
 ************************************************************ */
-void move(bool turn, String distance, String speed, String acc, String rampType)
+void move(bool turn, String distance_mm, String speed, String acc, String rampType)
 {
   UartToESP.println("move()");
   
-  if(distance.toInt() == 0)
+  if(distance_mm.toInt() == 0)
   {
     UartToESP.print("ERR: ");
     UartToESP.print(INVALID_PARAMETER);
@@ -200,12 +201,30 @@ void move(bool turn, String distance, String speed, String acc, String rampType)
     return;
   }
 
+
+  int32_t distance = 0;
+
+  if(turn)
+  {
+    distance = (distance_mm.toInt() * STEPS_PER_TURN) / 360;
+    
+    UartToESP.print("DEBUG: angle = ");
+    UartToESP.println(distance_mm.toInt() );
+    UartToESP.print("DEBUG: steps = ");
+    UartToESP.println(distance);
+  }
+  else
+  {
+    distance = (distance_mm.toInt() * STEPS_PER_M) / 1000;
+    
+  } 
+
   // for all other parameters use old value if not set correctly
   if(speed.toInt() > 0 && speed.toInt() < 300)  speed_sps = speed.toInt(); 
   if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
   if(rampType == "lin" || rampType == "exp" )   ; // tbd - currently ignored
 
-  motionThread.start(turn, distance.toInt(), speed_sps, accFactor);
+  motionThread.start(turn, distance, speed_sps, accFactor);
 }
 
 
