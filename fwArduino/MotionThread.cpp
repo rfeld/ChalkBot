@@ -9,7 +9,7 @@
 bool MotionThread::abortMotion = false;
 int  MotionThread::step = 0;
 bool MotionThread::moving = false;
-float MotionThread::acc = 1.1;
+float MotionThread::acc = 6;
 unsigned long int  MotionThread::stepInterval = 10000;
 unsigned long int  MotionThread::currentSpeed_sps = 10;
 unsigned long int  MotionThread::targetSpeed_sps  = 100;

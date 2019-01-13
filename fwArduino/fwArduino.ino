@@ -17,6 +17,7 @@
 
 SoftwareSerial UartToESP(11, 10); // Rx, Tx
 String inputString = "";
+bool enableDebug = false;
 
 // communication protocoll parameters
 const unsigned int  MAX_CMDS = 5;
@@ -35,7 +36,7 @@ enum ErrorCode {
 bool startStop = false;
 int dir = true;
 int speed_sps = 100;
-float accFactor = 1.2;
+float accFactor = 6; // 6 is a good value for linear ramp. (1.5 for exp)
 
 
 MotionThread motionThread;
@@ -93,7 +94,12 @@ void processInput()
         UartToESP.print("ACK: ");
         UartToESP.println(MAX_CMDS);
         cmdIndex = 0;
-      }      
+      }    
+         
+      else if(cmd=="debugOn")  enableDebug = true;
+      else if(cmd=="debugOff") enableDebug = false;
+      else if(cmd=="")         DebugMsg("empty line -> ignore");
+      
       // for command queue
       else if ( cmd == "move" || cmd == "turn" || cmd == "stepper" || cmd == "chalk" )
       {
@@ -139,7 +145,7 @@ void processInput()
 ************************************************************ */
 void processQueue(String input)
 {
-    UartToESP.println("processQueue()");
+    DebugMsg("processQueue()");
   
     if(motionThread.isMoving()) 
     {
@@ -188,12 +194,17 @@ void processQueue(String input)
 
 /** ********************************************************
  *  move
+ *  \param turn true for turns, false for linear moves
+ *  \param dist distance in mm for linear moves (turn=false)
+ *              or
+ *              tenth of degree for rotations (turn=true)
+ *  \param acc accelaration factor (depending on the ramp type)
 ************************************************************ */
-void move(bool turn, String distance_mm, String speed, String acc, String rampType)
+void move(bool turn, String dist, String speed, String acc, String rampType)
 {
-  UartToESP.println("move()");
+  DebugMsg("move()");
   
-  if(distance_mm.toInt() == 0)
+  if(dist.toInt() == 0)
   {
     UartToESP.print("ERR: ");
     UartToESP.print(INVALID_PARAMETER);
@@ -206,16 +217,11 @@ void move(bool turn, String distance_mm, String speed, String acc, String rampTy
 
   if(turn)
   {
-    distance = (distance_mm.toInt() * STEPS_PER_TURN) / 360;
-    
-    UartToESP.print("DEBUG: angle = ");
-    UartToESP.println(distance_mm.toInt() );
-    UartToESP.print("DEBUG: steps = ");
-    UartToESP.println(distance);
+    distance = (dist.toInt() * STEPS_PER_TURN) / 3600;   
   }
   else
   {
-    distance = (distance_mm.toInt() * STEPS_PER_M) / 1000;
+    distance = (dist.toInt() * STEPS_PER_M) / 1000;
     
   } 
 
@@ -246,7 +252,14 @@ void nextInQueue()
 }
 
 
-
+void DebugMsg(String msg)
+{
+  if(enableDebug) // disable debugging here by using if(false)
+  {
+    UartToESP.print("DEBUG: ");
+    UartToESP.println(msg);
+  }
+}
 
 
 /** ********************************************************
