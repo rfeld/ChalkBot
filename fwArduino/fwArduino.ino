@@ -101,7 +101,7 @@ void processInput()
       else if(cmd=="")         DebugMsg("empty line -> ignore");
       
       // for command queue
-      else if ( cmd == "move" || cmd == "turn" || cmd == "stepper" || cmd == "chalk" )
+      else if ( cmd == "move" || cmd == "turn" || cmd == "stepper" || cmd == "chalk" || cmd== "circle")
       {
         if (cmdIndex < MAX_CMDS)
         {
@@ -182,6 +182,7 @@ void processQueue(String input)
     else if(cmd=="turn")    move(true,  params[0], params[1], params[2], params[3]);
 //  else if(cmd=="stepper") stepperEnable(params[0]); // tbd
 //  else if(cmd=="chalk")   Serial.println("chalk");  // tbd
+    else if(cmd=="circle")  circle(params[0], params[1]);
     else
     {
       String answer = "ERR: ";
@@ -234,6 +235,37 @@ void move(bool turn, String dist, String speed, String acc, String rampType)
 }
 
 
+
+/** ********************************************************
+ *  circle - draw a circle
+ *  \param degree 3600 defines a full circle (negative values, change direction)
+ *  \param radius in mm. Must be greater than 0
+************************************************************ */
+void circle(String degree, String radius)
+{
+  DebugMsg("circle()");
+  
+  if(degree.toInt() == 0 || radius.toInt() <= 0 )
+  {
+    UartToESP.print("ERR: ");
+    UartToESP.print(INVALID_PARAMETER);
+    UartToESP.println(", invalid dist or radius");
+    return;
+  }
+
+  int32_t distLeft_mm  = 2 * PI * (radius.toInt() + WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+  int32_t distRight_mm = 2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+  
+  DebugMsg( "left: "  + String(distLeft_mm ) + " mm" );
+  DebugMsg( "right: " + String(distRight_mm) + " mm" );
+
+  int32_t distLeft  = (distLeft_mm  * STEPS_PER_M) / 1000;
+  int32_t distRight = (distRight_mm * STEPS_PER_M) / 1000;
+
+  DebugMsg( "left: "  + String(distLeft ) );
+  DebugMsg( "right: " + String(distRight) );
+  
+}
 
 
 /** ********************************************************
