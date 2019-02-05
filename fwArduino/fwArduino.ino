@@ -40,6 +40,7 @@ float accFactor = 6; // 6 is a good value for linear ramp. (1.5 for exp)
 
 
 MotionThread motionThread;
+MotionThread motionThread2; // independent wheel control for drawing of circles
 
 
 
@@ -90,7 +91,7 @@ void processInput()
       // stop
       if (cmd == "stop")
       {
-        motionThread.stop();
+        stop();
         UartToESP.print("ACK: ");
         UartToESP.println(MAX_CMDS);
         cmdIndex = 0;
@@ -124,7 +125,7 @@ void processInput()
         answer += INVALID_CMD;
         answer += ", invalid command ";
         answer += cmd;
-        motionThread.stop();
+        stop();
         UartToESP.println(answer);
         cmdIndex = 0;
       }
@@ -147,7 +148,7 @@ void processQueue(String input)
 {
     DebugMsg("processQueue()");
   
-    if(motionThread.isMoving()) 
+    if(isMoving()) 
     {
       String answer = "ERR: ";
       answer+= SW_ERROR;
@@ -193,6 +194,24 @@ void processQueue(String input)
   
 }
 
+/**
+ * stop both threads
+ */
+void stop()
+{
+  motionThread.stop();
+  motionThread2.stop();
+}
+
+/**
+ * isMoving
+ * \return true if one or both threads are still moving
+ */
+bool isMoving()
+{
+  return motionThread.isMoving() || motionThread2.isMoving();
+}
+
 /** ********************************************************
  *  move
  *  \param turn true for turns, false for linear moves
@@ -231,7 +250,7 @@ void move(bool turn, String dist, String speed, String acc, String rampType)
   if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
   if(rampType == "lin" || rampType == "exp" )   ; // tbd - currently ignored
 
-  motionThread.start(turn, distance, speed_sps, accFactor);
+  motionThread.start(turn, distance, speed_sps, accFactor, BOTH);
 }
 
 
@@ -302,7 +321,7 @@ void loop()
   // check for data from ESP/WiFi
   if (UartToESP.available() > 0) processInput();
 
-  if(cmdIndex>0 && !motionThread.isMoving()) nextInQueue();
+  if(cmdIndex>0 && !isMoving()) nextInQueue();
 
 }
 

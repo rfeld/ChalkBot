@@ -1,10 +1,13 @@
 
+enum Wheels_t { BOTH, LEFT, RIGHT };
+
 
 class MotionThread
 {
 public:
 
-  void start(bool turn, int steps, int speed_sps, float accFactor);
+
+  void start(bool turn, int steps, int speed_sps, float accFactor, Wheels_t wheels = BOTH);
 
   static void stop();
 

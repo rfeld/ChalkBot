@@ -19,7 +19,7 @@ unsigned long int  MotionThread::targetSpeed_sps  = 100;
 /////////////////////////////////////////////////////////
 // start
 /////////////////////////////////////////////////////////
-void MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
+void MotionThread::start(bool turn, int steps, int speed_sps, float accFactor, Wheels_t wheels)
 {
   moving = true;
   abortMotion  = false;
@@ -45,6 +45,8 @@ void MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 
   pulseStart(); 
 }
+
+
 
 
 /////////////////////////////////////////////////////////
