@@ -231,7 +231,8 @@ void move(bool turn, String dist, String speed, String acc, String rampType)
   if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
   if(rampType == "lin" || rampType == "exp" )   ; // tbd - currently ignored
 
-  motionThread.start(turn, distance, speed_sps, accFactor);
+  bool success = motionThread.start(turn, distance, speed_sps, accFactor);
+  if(!success) DebugMsg("SW error in: move()");
 }
 
 
@@ -253,17 +254,31 @@ void circle(String degree, String radius)
     return;
   }
 
+  // calculate distances in mm
+  int32_t distChalk_mm = 2 * PI * (radius.toInt()                    ) * degree.toInt() / 3600;
   int32_t distLeft_mm  = 2 * PI * (radius.toInt() + WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
-  int32_t distRight_mm = 2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
-  
+  int32_t distRight_mm = 2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;  
   DebugMsg( "left: "  + String(distLeft_mm ) + " mm" );
   DebugMsg( "right: " + String(distRight_mm) + " mm" );
 
+  // calculate wheel distances in steps
+  int32_t distChalk = (distChalk_mm * STEPS_PER_M) / 1000;
   int32_t distLeft  = (distLeft_mm  * STEPS_PER_M) / 1000;
   int32_t distRight = (distRight_mm * STEPS_PER_M) / 1000;
-
   DebugMsg( "left: "  + String(distLeft ) );
   DebugMsg( "right: " + String(distRight) );
+
+  // calculate wheel speeds
+  int32_t motionDuration_ms = ( 1000 * distChalk ) / speed_sps;
+  DebugMsg( "motionDuration: "  + String(motionDuration_ms ) );
+  int32_t speedLeft_sps  = (distLeft  * 1000) / motionDuration_ms;
+  int32_t speedRight_sps = (distRight * 1000) / motionDuration_ms;
+  DebugMsg( "speed_sps:      "  + String(speed_sps      ) );
+  DebugMsg( "speedLeft_sps:  "  + String(speedLeft_sps  ) );
+  DebugMsg( "speedRight_sps: "  + String(speedRight_sps ) );
+
+  bool success = motionThread.startCircle(distLeft, distRight, abs(speedLeft_sps), abs(speedRight_sps));
+  if(!success) DebugMsg("SW error in: move()");
   
 }
 
