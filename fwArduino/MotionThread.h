@@ -1,8 +1,6 @@
 #include "inttypes.h" // now types like uint32_t can be used.
 
 
-typedef enum { BOTH, RIGHT, LEFT } Wheel_t;
-
 class MotionThread
 {
 public:
@@ -21,15 +19,13 @@ private:
   static void pulse();
 
   static void pulseCircle();
-
-  static Wheel_t whichWheel();
   
-  static unsigned long int rampUp_exp();
+  static unsigned long int rampUp_exp(unsigned long int speed, unsigned long int target);
 
-  static unsigned long int rampUp_lin();
+  static unsigned long int rampUp_lin(unsigned long int speed, unsigned long int target);
 
   
-  static Wheel_t wheel;
+
 
   static bool moving;
   
@@ -49,9 +45,9 @@ private:
   
   static unsigned long int  currentSpeedRight_sps;
   
-  static unsigned long int  baseSpeedLeft_sps;
+  static unsigned long int  targetSpeedLeft_sps;
   
-  static unsigned long int  baseSpeedRight_sps;
+  static unsigned long int  targetSpeedRight_sps;
 
   static unsigned long int  intervalRight;
 

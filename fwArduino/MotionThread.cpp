@@ -16,8 +16,8 @@ unsigned long int  MotionThread::targetSpeed_sps  = 100;
 
 unsigned long int  MotionThread::currentSpeedLeft_sps  = 10;
 unsigned long int  MotionThread::currentSpeedRight_sps = 10;
-unsigned long int  MotionThread::baseSpeedLeft_sps     = 10;
-unsigned long int  MotionThread::baseSpeedRight_sps    = 10;
+unsigned long int  MotionThread::targetSpeedLeft_sps   = 10;
+unsigned long int  MotionThread::targetSpeedRight_sps  = 10;
 unsigned long int  MotionThread::intervalLeft = 10;
 unsigned long int  MotionThread::intervalRight = 10;
 
@@ -26,8 +26,7 @@ unsigned long int  MotionThread::intervalRight = 10;
 // start for linear movement or turns on spot
 /////////////////////////////////////////////////////////
 bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
-{
-  
+{  
   if(moving) return false;
   
   moving = true;
@@ -66,10 +65,10 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
   moving = true;
   abortMotion  = false;
 
-  currentSpeedRight_sps = speedRight;
-  baseSpeedRight_sps    = speedRight;
-  currentSpeedLeft_sps  = speedLeft;
-  baseSpeedLeft_sps     = speedLeft;  
+  currentSpeedRight_sps = 10;
+  targetSpeedRight_sps  = speedRight;
+  currentSpeedLeft_sps  = 10;
+  targetSpeedLeft_sps   = speedLeft;  
   intervalRight = 1000000/currentSpeedRight_sps;
   intervalLeft  = 1000000/currentSpeedLeft_sps;
   
@@ -83,15 +82,15 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
   if(stepsRight<0)stepsRight=-stepsRight;
   if(stepsLeft <0)stepsLeft =-stepsLeft;
   step = stepsRight + stepsLeft;
-//
-//  Serial.println("motionThread");
-//  Serial.print(speedRight);
-//  Serial.print(" ");
-//  Serial.println(speedLeft);
-//  Serial.print(intervalRight);
-//  Serial.print(" ");
-//  Serial.println(intervalLeft);  
-//  stop();
+
+  //  Serial.println("motionThread");
+  //  Serial.print(speedRight);
+  //  Serial.print(" ");
+  //  Serial.println(speedLeft);
+  //  Serial.print(intervalRight);
+  //  Serial.print(" ");
+  //  Serial.println(intervalLeft);  
+  //  stop();
 
   pulseCircle(); 
 
@@ -122,17 +121,15 @@ static void MotionThread::pulse()
   digitalWrite(X_STP, HIGH);
   digitalWrite(Y_STP, HIGH);
 
-  // delay needed?
-  // tests showed no problems with this, but...
-
-  digitalWrite(X_STP, LOW);
-  digitalWrite(Y_STP, LOW);
-
-  stepInterval = rampUp_lin();
+  currentSpeed_sps = rampUp_lin(currentSpeed_sps, targetSpeed_sps);
+  stepInterval = 1000000/currentSpeed_sps;
 
   step--;
   if(abortMotion || step<=0) stop();
   else      TimerLib.setTimeout_us(pulse, stepInterval );
+
+  digitalWrite(X_STP, LOW);
+  digitalWrite(Y_STP, LOW);
   
 }
 
@@ -143,27 +140,34 @@ static void MotionThread::pulse()
 static void MotionThread::pulseCircle() 
 { 
 
-  if( whichWheel() == RIGHT )
+  if(intervalRight < intervalLeft) 
   {
     digitalWrite(X_STP, HIGH);
-    // delay needed?
-    // tests showed no problems with this, but...
+    
+    stepInterval  = intervalRight;
+    intervalLeft  = intervalLeft - intervalRight;
+    currentSpeedRight_sps = rampUp_lin(currentSpeedRight_sps, targetSpeedRight_sps);    
+    intervalRight    = 1000000/currentSpeedRight_sps; 
+    
     digitalWrite(X_STP, LOW);
   }
   else
   {
     digitalWrite(Y_STP, HIGH);
-    // delay needed?
-    // tests showed no problems with this, but...
+    
+    stepInterval  = intervalLeft;
+    intervalRight  = intervalRight - intervalLeft;
+    currentSpeedLeft_sps = rampUp_lin(currentSpeedLeft_sps, targetSpeedLeft_sps);  
+    intervalLeft    = 1000000/currentSpeedLeft_sps; 
+    
     digitalWrite(Y_STP, LOW);
   }
-
   
+  //  Serial.print(stepInterval);
+  //  Serial.print(" ");
+  //  Serial.println(step);
 
-//  Serial.print(stepInterval);
-//  Serial.print(" ");
-//  Serial.println(step);
-
+  // arbitrary small value if timing is closed to zero
   if(stepInterval<100) stepInterval=100;
 
   step--;
@@ -173,76 +177,42 @@ static void MotionThread::pulseCircle()
 }
 
 
-/////////////////////////////////////////////////////////
-// whichWheel
-/////////////////////////////////////////////////////////
-static Wheel_t MotionThread::whichWheel() 
-{
-//
-//  Serial.print("intervalRight, intervalLeft: ");
-//  Serial.print(intervalRight);
-//  Serial.print(", ");
-//  Serial.println(intervalLeft);
-  
-  if(intervalRight > intervalLeft) 
-  {
-    stepInterval  = intervalLeft;
-    intervalRight = intervalRight - intervalLeft;
-    intervalLeft  = 1000000/baseSpeedLeft_sps;
-
-//    Serial.print("Process  - intervalRight, intervalLeft: ");
-//    Serial.print(intervalRight);
-//    Serial.print(", ");
-//    Serial.println(intervalLeft);
-  
-    
-    return LEFT;
-  }
-  else
-  {
-    stepInterval  = intervalRight;
-    intervalLeft  = intervalLeft - intervalRight;
-    intervalRight    = 1000000/baseSpeedRight_sps; 
-
-//      Serial.print("Process  - intervalRight, intervalLeft: ");
-//      Serial.print(intervalRight);
-//      Serial.print(", ");
-//      Serial.println(intervalLeft);
-  
-    return RIGHT;
-  }  
-}
-
 
 /////////////////////////////////////////////////////////
 // rampUp_exp
 /////////////////////////////////////////////////////////
-static unsigned long int MotionThread::rampUp_exp()
+static unsigned long int MotionThread::rampUp_exp(unsigned long int speed, unsigned long int target)
 { 
-  if(currentSpeed_sps<targetSpeed_sps)
+  if(speed<target)
   {
-    currentSpeed_sps = currentSpeed_sps * acc;
+    speed = speed * acc;
   }
 
-  if(currentSpeed_sps>targetSpeed_sps) currentSpeed_sps = targetSpeed_sps;
+  if(speed>target) speed = target;
 
-  return (1000000/currentSpeed_sps);
+  return speed;
 }
 
 
 /////////////////////////////////////////////////////////
 // rampUp_lin
 /////////////////////////////////////////////////////////
-static unsigned long int MotionThread::rampUp_lin()
+static unsigned long int MotionThread::rampUp_lin(unsigned long int speed, unsigned long int target)
 { 
-  if(currentSpeed_sps<targetSpeed_sps)
+
+  if(speed<target)
   {
-    currentSpeed_sps = currentSpeed_sps + acc;
+    speed = speed + acc;
+    
+    //    Serial.print("acc ");
+    //    Serial.print(speed);
+    //    Serial.print(" -> ");
+    //    Serial.println(target);
   }
 
-  if(currentSpeed_sps>targetSpeed_sps) currentSpeed_sps = targetSpeed_sps;
+  if(speed>target) speed = target;
 
-  return (1000000/currentSpeed_sps);
+  return speed;
 }
 
 
