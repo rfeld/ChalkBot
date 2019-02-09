@@ -72,10 +72,10 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
   intervalRight = 1000000/currentSpeedRight_sps;
   intervalLeft  = 1000000/currentSpeedLeft_sps;
   
-  if(stepsRight>0)  {  digitalWrite(X_DIR, LOW);   }
-  else              {  digitalWrite(X_DIR, HIGH);  }
-  if(stepsLeft>0)   {  digitalWrite(Y_DIR, HIGH);   }
-  else              {  digitalWrite(Y_DIR, LOW);  }
+  if(stepsRight>0)  {  digitalWrite(Y_DIR, LOW);   }
+  else              {  digitalWrite(Y_DIR, HIGH);  }
+  if(stepsLeft>0)   {  digitalWrite(X_DIR, HIGH);  }
+  else              {  digitalWrite(X_DIR, LOW);   }
 
   digitalWrite(EN, LOW);
 
@@ -142,25 +142,25 @@ static void MotionThread::pulseCircle()
 
   if(intervalRight < intervalLeft) 
   {
-    digitalWrite(X_STP, HIGH);
+    digitalWrite(Y_STP, HIGH);
     
     stepInterval  = intervalRight;
     intervalLeft  = intervalLeft - intervalRight;
     currentSpeedRight_sps = rampUp_lin(currentSpeedRight_sps, targetSpeedRight_sps);    
     intervalRight    = 1000000/currentSpeedRight_sps; 
     
-    digitalWrite(X_STP, LOW);
+    digitalWrite(Y_STP, LOW);
   }
   else
   {
-    digitalWrite(Y_STP, HIGH);
+    digitalWrite(X_STP, HIGH);
     
     stepInterval  = intervalLeft;
     intervalRight  = intervalRight - intervalLeft;
     currentSpeedLeft_sps = rampUp_lin(currentSpeedLeft_sps, targetSpeedLeft_sps);  
     intervalLeft    = 1000000/currentSpeedLeft_sps; 
     
-    digitalWrite(Y_STP, LOW);
+    digitalWrite(X_STP, LOW);
   }
   
   //  Serial.print(stepInterval);
