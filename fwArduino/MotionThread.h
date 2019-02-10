@@ -1,9 +1,12 @@
 #include "inttypes.h" // now types like uint32_t can be used.
 
+typedef enum { RAMP_LIN, RAMP_EXP } RampTypes_t;
 
 class MotionThread
 {
 public:
+
+  bool configure(int speed_sps, float accFactor, RampTypes_t rampType);
 
   bool start(bool turn, int steps, int speed_sps, float accFactor);
 
@@ -20,11 +23,7 @@ private:
 
   static void pulseCircle();
   
-  static unsigned long int rampUp_exp(unsigned long int speed, unsigned long int target);
-
-  static unsigned long int rampUp_lin(unsigned long int speed, unsigned long int target);
-
-  
+  static unsigned long int rampFunc(unsigned long int speed, unsigned long int target);
 
 
   static bool moving;
@@ -52,6 +51,10 @@ private:
   static unsigned long int  intervalRight;
 
   static unsigned long int  intervalLeft;
+
+  static unsigned int       stepsForRamp;
+
+  static RampTypes_t        ramp;
 
 };
 

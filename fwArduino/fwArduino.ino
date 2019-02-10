@@ -37,6 +37,8 @@ bool startStop = false;
 int dir = true;
 int speed_sps = 100;
 float accFactor = 6; // 6 is a good value for linear ramp. (1.5 for exp)
+RampTypes_t ramp = RAMP_LIN;
+
 
 
 MotionThread motionThread;
@@ -101,7 +103,12 @@ void processInput()
       else if(cmd=="")         DebugMsg("empty line -> ignore");
       
       // for command queue
-      else if ( cmd == "move" || cmd == "turn" || cmd == "stepper" || cmd == "chalk" || cmd== "circle")
+      else if ( cmd == "move"    || 
+                cmd == "turn"    || 
+                cmd == "stepper" || 
+                cmd == "chalk"   || 
+                cmd == "circle"  || 
+                cmd == "config"   )  
       {
         if (cmdIndex < MAX_CMDS)
         {
@@ -183,6 +190,7 @@ void processQueue(String input)
 //  else if(cmd=="stepper") stepperEnable(params[0]); // tbd
 //  else if(cmd=="chalk")   Serial.println("chalk");  // tbd
     else if(cmd=="circle")  circle(params[0], params[1]);
+    else if(cmd=="config")  configure( params[0], params[1], params[2]);
     else
     {
       String answer = "ERR: ";
@@ -191,6 +199,25 @@ void processQueue(String input)
       UartToESP.println(answer); 
     }
   
+}
+
+/** ********************************************************
+ *  configure use old value or default if not set correctly
+ *  \param speed
+ *  \param acc accelaration factor (depending on the ramp type)
+ *  \param rampType
+************************************************************ */
+void configure(String speed, String acc, String rampType)
+{
+  
+  if(speed.toInt() > 0 && speed.toInt() < 300)  speed_sps = speed.toInt(); 
+ 
+  if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
+    
+  if      (rampType == "exp") ramp = RAMP_EXP;
+  else if (rampType == "lin") ramp = RAMP_LIN;
+
+  motionThread.configure(speed_sps, accFactor, ramp);
 }
 
 /** ********************************************************
@@ -225,11 +252,8 @@ void move(bool turn, String dist, String speed, String acc, String rampType)
     distance = (dist.toInt() * STEPS_PER_M) / 1000;  
   } 
 
-  // for all other parameters use old value if not set correctly
-  if(speed.toInt() > 0 && speed.toInt() < 300)  speed_sps = speed.toInt(); 
-  if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
-  if(rampType == "lin" || rampType == "exp" )   ; // tbd - currently ignored
-
+  configure(speed, acc, rampType);
+  
   bool success = motionThread.start(turn, distance, speed_sps, accFactor);
   if(!success) DebugMsg("SW error in: move()");
 }

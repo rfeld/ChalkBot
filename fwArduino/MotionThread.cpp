@@ -20,6 +20,20 @@ unsigned long int  MotionThread::targetSpeedLeft_sps   = 10;
 unsigned long int  MotionThread::targetSpeedRight_sps  = 10;
 unsigned long int  MotionThread::intervalLeft = 10;
 unsigned long int  MotionThread::intervalRight = 10;
+unsigned int       MotionThread::stepsForRamp = 0;
+RampTypes_t        MotionThread::ramp = RAMP_LIN;
+
+
+
+
+bool MotionThread::configure(int speed_sps, float accFactor, RampTypes_t rampType)
+{
+  if(moving) return false;
+  
+  targetSpeed_sps  = speed_sps;  
+  acc              = accFactor;
+  ramp             = rampType;
+}
 
 
 /////////////////////////////////////////////////////////
@@ -43,9 +57,13 @@ bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
   if(steps<0)steps=-steps;
 
   step = steps;
+  stepsForRamp = 0;
 
   currentSpeed_sps = 10;
   targetSpeed_sps  = speed_sps;
+  Serial.print("targetSpeed: ");
+  Serial.println(targetSpeed_sps);
+  
 
   acc = accFactor;
   
@@ -82,6 +100,7 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
   if(stepsRight<0)stepsRight=-stepsRight;
   if(stepsLeft <0)stepsLeft =-stepsLeft;
   step = stepsRight + stepsLeft;
+  stepsForRamp = 0;
 
   //  Serial.println("motionThread");
   //  Serial.print(speedRight);
@@ -121,7 +140,7 @@ static void MotionThread::pulse()
   digitalWrite(X_STP, HIGH);
   digitalWrite(Y_STP, HIGH);
 
-  currentSpeed_sps = rampUp_lin(currentSpeed_sps, targetSpeed_sps);
+  currentSpeed_sps = rampFunc(currentSpeed_sps, targetSpeed_sps);
   stepInterval = 1000000/currentSpeed_sps;
 
   step--;
@@ -146,7 +165,7 @@ static void MotionThread::pulseCircle()
     
     stepInterval  = intervalRight;
     intervalLeft  = intervalLeft - intervalRight;
-    currentSpeedRight_sps = rampUp_lin(currentSpeedRight_sps, targetSpeedRight_sps);    
+    currentSpeedRight_sps = rampFunc(currentSpeedRight_sps, targetSpeedRight_sps);    
     intervalRight    = 1000000/currentSpeedRight_sps; 
     
     digitalWrite(Y_STP, LOW);
@@ -157,7 +176,7 @@ static void MotionThread::pulseCircle()
     
     stepInterval  = intervalLeft;
     intervalRight  = intervalRight - intervalLeft;
-    currentSpeedLeft_sps = rampUp_lin(currentSpeedLeft_sps, targetSpeedLeft_sps);  
+    currentSpeedLeft_sps = rampFunc(currentSpeedLeft_sps, targetSpeedLeft_sps);  
     intervalLeft    = 1000000/currentSpeedLeft_sps; 
     
     digitalWrite(X_STP, LOW);
@@ -179,37 +198,43 @@ static void MotionThread::pulseCircle()
 
 
 /////////////////////////////////////////////////////////
-// rampUp_exp
+// ramp
 /////////////////////////////////////////////////////////
-static unsigned long int MotionThread::rampUp_exp(unsigned long int speed, unsigned long int target)
+static unsigned long int MotionThread::rampFunc(unsigned long int speed, unsigned long int target)
 { 
-  if(speed<target)
+  // ramp Down
+  if( step < stepsForRamp )
   {
-    speed = speed * acc;
+    if(ramp==RAMP_LIN)  speed = speed - acc;
+    else                speed = speed / acc;
+    if(speed<10) speed = 10;
+
+    //  Serial.print("dec ");
+    //  Serial.print(speed);
+    //  Serial.print("-> ");
+    //  Serial.println(target);
+  }
+  
+  // ramp Up
+  else if( speed<target )
+  {
+    if(ramp==RAMP_LIN)  speed = acc + speed;
+    else                speed = acc * speed;
+
+    stepsForRamp++;
+      
+    //  Serial.print("acc ");
+    //  Serial.print(speed);
+    //  Serial.print("-> ");
+    //  Serial.println(target);
+  }
+  else
+  {    
+    // Serial.print("target ");
+    // Serial.println(speed);    
   }
 
-  if(speed>target) speed = target;
-
-  return speed;
-}
-
-
-/////////////////////////////////////////////////////////
-// rampUp_lin
-/////////////////////////////////////////////////////////
-static unsigned long int MotionThread::rampUp_lin(unsigned long int speed, unsigned long int target)
-{ 
-
-  if(speed<target)
-  {
-    speed = speed + acc;
-    
-    //    Serial.print("acc ");
-    //    Serial.print(speed);
-    //    Serial.print(" -> ");
-    //    Serial.println(target);
-  }
-
+  // target reached
   if(speed>target) speed = target;
 
   return speed;
