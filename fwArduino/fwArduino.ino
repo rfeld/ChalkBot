@@ -222,8 +222,7 @@ void move(bool turn, String dist, String speed, String acc, String rampType)
   }
   else
   {
-    distance = (dist.toInt() * STEPS_PER_M) / 1000;
-    
+    distance = (dist.toInt() * STEPS_PER_M) / 1000;  
   } 
 
   // for all other parameters use old value if not set correctly
@@ -268,11 +267,26 @@ void circle(String degree, String radius)
   DebugMsg( "left: "  + String(distLeft ) );
   DebugMsg( "right: " + String(distRight) );
 
-  // calculate wheel speeds
-  int32_t motionDuration_ms = ( 1000 * distChalk ) / speed_sps;
+  // calculate wheel speeds: 
+  //    The desired speed should be used for the speed of the chalk.
+  //    But no wheel should be faster than 1.5x speed.  
+  int32_t motionDuration_ms = abs( ( 1000 * distChalk ) / speed_sps );
+  if( motionDuration_ms == 0) motionDuration_ms = 10;
   DebugMsg( "motionDuration: "  + String(motionDuration_ms ) );
   int32_t speedLeft_sps  = (distLeft  * 1000) / motionDuration_ms;
   int32_t speedRight_sps = (distRight * 1000) / motionDuration_ms;
+  if( abs(speedLeft_sps) > (1.5*speed_sps) )
+  {
+    speedLeft_sps     = 1.5*speed_sps;
+    motionDuration_ms = ( 1000 * distLeft ) / speedLeft_sps;
+    speedRight_sps    = (distRight * 1000) / motionDuration_ms;
+  }
+  if( abs(speedRight_sps) > (1.5*speed_sps) )
+  {
+    speedRight_sps     = 1.5*speed_sps;
+    motionDuration_ms = ( 1000 * distRight ) / speedRight_sps;
+    speedLeft_sps    = (distLeft * 1000) / motionDuration_ms;
+  }
   DebugMsg( "speed_sps:      "  + String(speed_sps      ) );
   DebugMsg( "speedLeft_sps:  "  + String(speedLeft_sps  ) );
   DebugMsg( "speedRight_sps: "  + String(speedRight_sps ) );
