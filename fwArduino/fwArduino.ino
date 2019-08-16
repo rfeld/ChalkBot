@@ -18,6 +18,7 @@
 SoftwareSerial UartToESP(11, 10); // Rx, Tx
 String inputString = "";
 bool enableDebug = false;
+bool autonom = true;
 
 // communication protocoll parameters
 const unsigned int  MAX_CMDS = 5;
@@ -66,6 +67,7 @@ void setup()
   UartToESP.begin(9600);
 
   UartToESP.println("started");
+  Serial.print("started ");
 
 }
 
@@ -108,7 +110,8 @@ void processInput()
                 cmd == "stepper" || 
                 cmd == "chalk"   || 
                 cmd == "circle"  || 
-                cmd == "config"   )  
+                cmd == "config"  ||
+                cmd == "auto")
       {
         if (cmdIndex < MAX_CMDS)
         {
@@ -191,6 +194,7 @@ void processQueue(String input)
 //  else if(cmd=="chalk")   Serial.println("chalk");  // tbd
     else if(cmd=="circle")  circle(params[0], params[1]);
     else if(cmd=="config")  configure( params[0], params[1], params[2]);
+    else if(cmd=="auto")    autonom=true;
     else
     {
       String answer = "ERR: ";
@@ -325,7 +329,9 @@ void circle(String degree, String radius)
  *  nextInQueue
 ************************************************************ */
 void nextInQueue()
-{          
+{  
+  Serial.println(cmdQueue[0]);
+        
   processQueue(cmdQueue[0]);
   
   // move elements in queue
@@ -343,7 +349,7 @@ void DebugMsg(String msg)
   {
     UartToESP.print("DEBUG: ");
     UartToESP.println(msg);
-  }
+  }  
 }
 
 
@@ -353,7 +359,35 @@ void DebugMsg(String msg)
 void loop()
 {
   // check for data from ESP/WiFi
-  if (UartToESP.available() > 0) processInput();
+  if (UartToESP.available() > 0) 
+  {
+    autonom = false;
+    processInput();
+  }
+  else if(autonom && cmdIndex<1 )
+  {
+    Serial.print("generateInput ");
+    Serial.println(cmdIndex);
+    
+    int val = 3600 + random(150, 3450);
+    String mvCmd = "circle: ";
+    mvCmd += val;
+    val = random(250,500);
+    mvCmd += ",";
+    mvCmd += val;
+    cmdQueue[cmdIndex++] = mvCmd;
+
+    mvCmd = "turn: 900";
+    cmdQueue[cmdIndex++] = mvCmd;
+
+    mvCmd = "move: ";
+    val = random(500,1000);
+    mvCmd += val;
+    cmdQueue[cmdIndex++] = mvCmd;
+
+    mvCmd = "turn: 900";
+    cmdQueue[cmdIndex++] = mvCmd;        
+  }
 
   if(cmdIndex>0 && !motionThread.isMoving()) nextInQueue();
 
