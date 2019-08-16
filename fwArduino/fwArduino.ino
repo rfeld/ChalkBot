@@ -366,8 +366,8 @@ void loop()
   }
   else if(autonom && cmdIndex<1 )
   {
-    Serial.print("generateInput ");
-    Serial.println(cmdIndex);
+    // Zufallsmuster aus Kreisen zwischen 50 und 100cm Durchmesser
+    // und Geraden zwischen 50 und 100cm Länge
     
     int val = 3600 + random(150, 3450);
     String mvCmd = "circle: ";
@@ -377,7 +377,7 @@ void loop()
     mvCmd += val;
     cmdQueue[cmdIndex++] = mvCmd;
 
-    mvCmd = "turn: 900";
+    mvCmd = "turn: -900";
     cmdQueue[cmdIndex++] = mvCmd;
 
     mvCmd = "move: ";
@@ -385,7 +385,7 @@ void loop()
     mvCmd += val;
     cmdQueue[cmdIndex++] = mvCmd;
 
-    mvCmd = "turn: 900";
+    mvCmd = "turn: -900";
     cmdQueue[cmdIndex++] = mvCmd;        
   }
 
