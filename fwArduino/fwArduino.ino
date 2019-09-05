@@ -18,7 +18,50 @@
 SoftwareSerial UartToESP(11, 10); // Rx, Tx
 String inputString = "";
 bool enableDebug = false;
-bool autonom = true;
+bool autonom = false;
+bool rocket = true;
+
+
+
+//String rocketArray[] = {
+//  {1, 206  , 999 "};
+
+
+const int rocketArray[29][3]  = {
+{1, -206  , 999 },
+{1, -435  , 260 },
+{1, 516 , 115 },
+{0,1, -1800    },
+{1, -487  , 115 },
+{1, 97  , 137 },
+{0,1, -722     },
+{1, -407  , 105 },
+{0,1, 1146     },
+{1, 3352  , 44  },
+{0,1, -2384    },
+{1, -458  , 80  },
+{0,1, -642     },
+{1, -246  , 136 },
+{1, -275  , 612 },
+{0,1, -275     },
+{1, -413  , 196 },
+{1, -1833 , 26  },
+{1, -315  , 236 },
+{0,1, -264     },
+{1, -390  , 303 },
+{0,1, 1502     },
+{1, 2510  , 177 },
+{0,1, 1674     },
+{1, -831  , 133 },
+{0,1, -487     },
+{1, -865  , 123 },
+{0,1, 1662     },
+{1, 138 , 732 }
+};
+unsigned int rocketLen = 29;//sizeof(rocketArray);
+unsigned int rocketCount = 0;
+
+
 
 // communication protocoll parameters
 const unsigned int  MAX_CMDS = 5;
@@ -217,6 +260,7 @@ void configure(String speed, String acc, String rampType)
   if(speed.toInt() > 0 && speed.toInt() < 300)  speed_sps = speed.toInt(); 
  
   if(acc.toFloat()>1.1)                         accFactor = acc.toFloat();
+  // todo: temporär ist acc auf 6 festgelegt und nicht configuri
     
   if      (rampType == "exp") ramp = RAMP_EXP;
   else if (rampType == "lin") ramp = RAMP_LIN;
@@ -283,8 +327,21 @@ void circle(String degree, String radius)
 
   // calculate distances in mm
   int32_t distChalk_mm = 2 * PI * (radius.toInt()                    ) * degree.toInt() / 3600;
-  int32_t distLeft_mm  = 2 * PI * (radius.toInt() + WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
-  int32_t distRight_mm = 2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;  
+  
+  int32_t distLeft_mm;
+  int32_t distRight_mm;  
+
+  if(degree.toInt()>0)
+  {
+      distLeft_mm  = 2 * PI * (radius.toInt() + WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+      distRight_mm = 2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+  }
+  else
+  {
+      distRight_mm  = -2 * PI * (radius.toInt() + WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+      distLeft_mm  = -2 * PI * (radius.toInt() - WHEEL_DISTANCE/2 ) * degree.toInt() / 3600;
+  }
+  
   DebugMsg( "left: "  + String(distLeft_mm ) + " mm" );
   DebugMsg( "right: " + String(distRight_mm) + " mm" );
 
@@ -364,6 +421,28 @@ void loop()
     autonom = false;
     processInput();
   }
+  else if(rocket && cmdIndex<3 && rocketCount < rocketLen)
+  {
+    //Serial.println("rocket");
+    String cmd ="";
+    if ( rocketArray[rocketCount][0] == 1 )
+    {
+      cmd = "circle: ";
+      cmd +=rocketArray[rocketCount][1];
+      cmd += ",";
+      cmd += (rocketArray[rocketCount][2]*2);
+    }
+    else 
+    {
+      cmd = "turn: ";
+      cmd +=rocketArray[rocketCount][2];
+     
+    }
+    
+    rocketCount++;
+    cmdQueue[cmdIndex++] = cmd;
+    
+  }
   else if(autonom && cmdIndex<1 )
   {
     // Zufallsmuster aus Kreisen zwischen 50 und 100cm Durchmesser
@@ -392,7 +471,3 @@ void loop()
   if(cmdIndex>0 && !motionThread.isMoving()) nextInQueue();
 
 }
-
-
-
-

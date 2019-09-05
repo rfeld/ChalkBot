@@ -243,4 +243,3 @@ static unsigned long int MotionThread::rampFunc(unsigned long int speed, unsigne
 
 
 #endif // MOTIONTHREAD_H
-

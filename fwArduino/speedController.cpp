@@ -17,7 +17,7 @@ speedController::speedController(unsigned int baseClk_us)
 
 
 
-bool  speedController::isNextStep(uint32_t ticks )
+bool  speedController::isNextStep(unsigned long ticks )
 {
   m_cumTicks += ticks;
 
@@ -33,8 +33,7 @@ bool  speedController::isNextStep(uint32_t ticks )
     return false;
 }
 
-
-uint32_t speedController::go( uint32_t steps , uint32_t speed ) 
+unsigned long speedController::go( unsigned long steps , unsigned long speed ) 
 { 
   m_cumTicks = 0;
  

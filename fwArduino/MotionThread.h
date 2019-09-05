@@ -57,5 +57,3 @@ private:
   static RampTypes_t        ramp;
 
 };
-
-
