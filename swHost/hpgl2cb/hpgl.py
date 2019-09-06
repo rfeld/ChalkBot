@@ -22,7 +22,7 @@ THE SOFTWARE.
 
 """
 
-from .fonts import stick_font
+from fonts import stick_font
 
 def parse_hpgl(gl_file):
     """Convert HP Graphics Language (HPGL) to list of paths"""
@@ -235,7 +235,9 @@ def parse_hpgl(gl_file):
             # output P1 and P2 - ignored
             pass
         else:
-            raise Exception("Unknown HPGL command (%s)" % cmd)
+            #raise Exception("Unknown HPGL command (%s)" % cmd)
+            print("Unknown HPGL command (%s)" % cmd)
+
 
     # determine size
     max_x = 0
