@@ -1,0 +1,27 @@
+# Definition des Buchstaben "H"
+move;800
+turn;900
+move;100
+turn;900
+move;300
+turn;-900;ccw
+# Querbalken 1/2:
+move;400
+turn;-900;ccw
+# Rechter Vertikaler Balken
+move;300
+turn;900
+move;100
+turn;900
+move;800
+turn;900
+move;100
+turn;900
+move;400
+turn;-900;ccw
+# Querbalken 2/2:
+move;400
+turn;-900;ccw
+move;400
+turn;900
+move;100

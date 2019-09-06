@@ -1,0 +1,146 @@
+[
+  {
+    "nodes" : [
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{18, 13}, {51, 31}}",
+        "class" : "Switch",
+        "attributes" : {
+          "action" : "motor",
+          "frame" : "{{91, 40}, {51, 31}}",
+          "value" : false,
+          "class" : "Switch",
+          "name" : "switch1",
+          "uuid" : "CF0C93F8-8AAC-4ED2-ADBC-02E5354B6EE9"
+        },
+        "selected" : true
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{77, 13}, {150, 32}}",
+        "class" : "Label",
+        "attributes" : {
+          "font_size" : 18,
+          "frame" : "{{41, 40}, {150, 32}}",
+          "uuid" : "785C14F5-C43F-4B5E-96B4-B6288450B138",
+          "class" : "Label",
+          "alignment" : "left",
+          "text" : "Aktiviere Motoren",
+          "name" : "label1",
+          "font_name" : "<System>"
+        },
+        "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{118, 232}, {64, 64}}",
+        "class" : "Button",
+        "attributes" : {
+          "action" : "runter",
+          "border_width" : 3,
+          "frame" : "{{87, 70}, {80, 32}}",
+          "title" : "⬇️",
+          "uuid" : "5E799A10-CFF2-41D7-A174-4B6EC02D5A84",
+          "class" : "Button",
+          "corner_radius" : 0,
+          "name" : "button1",
+          "font_size" : 48
+        },
+        "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{118, 88}, {64, 64}}",
+        "class" : "Button",
+        "attributes" : {
+          "action" : "hoch",
+          "border_width" : 3,
+          "frame" : "{{120, 224}, {80, 32}}",
+          "title" : "⬆️",
+          "uuid" : "B9649B7A-06B7-4BA2-9E27-12843B840E31",
+          "class" : "Button",
+          "corner_radius" : 0,
+          "name" : "button2",
+          "font_size" : 48
+        },
+        "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{190, 160}, {64, 64}}",
+        "class" : "Button",
+        "attributes" : {
+          "action" : "rechts",
+          "border_width" : 3,
+          "frame" : "{{120, 224}, {80, 32}}",
+          "title" : "⤵️",
+          "uuid" : "803C285F-E2F1-4096-85A0-85760329D679",
+          "class" : "Button",
+          "corner_radius" : 0,
+          "name" : "button3",
+          "font_size" : 48
+        },
+        "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{46, 160}, {64, 64}}",
+        "class" : "Button",
+        "attributes" : {
+          "action" : "links",
+          "border_width" : 3,
+          "frame" : "{{120, 224}, {80, 32}}",
+          "title" : "⤴️",
+          "uuid" : "06958F37-4820-4A48-80BC-2FB0AB14D6B9",
+          "class" : "Button",
+          "corner_radius" : 0,
+          "name" : "button4",
+          "font_size" : 48
+        },
+        "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{118, 160}, {64, 64}}",
+        "class" : "Button",
+        "attributes" : {
+          "action" : "stop",
+          "border_width" : 3,
+          "frame" : "{{120, 224}, {80, 32}}",
+          "title" : "🛑",
+          "uuid" : "DD43CAE1-E3D5-4BD5-936D-5C508B114593",
+          "class" : "Button",
+          "corner_radius" : 0,
+          "name" : "button5",
+          "font_size" : 48
+        },
+        "selected" : false
+      }
+    ],
+    "frame" : "{{0, 0}, {320, 480}}",
+    "class" : "View",
+    "attributes" : {
+      "border_color" : "RGBA(0.000000,0.000000,0.000000,1.000000)",
+      "enabled" : true,
+      "background_color" : "RGBA(1.000000,1.000000,1.000000,1.000000)",
+      "tint_color" : "RGBA(0.000000,0.478000,1.000000,1.000000)",
+      "name" : "",
+      "flex" : ""
+    },
+    "selected" : false
+  }
+]
