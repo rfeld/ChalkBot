@@ -2,8 +2,8 @@ class chalkBot:
     def __init__(self):
         self.__doc__="Generates Commands from API Calls"
 
-    # Actually just return command. Offers possible playe to hook debug messages etc.
-    def sendCommand(self, command = str()):
+    # Actually just return command. Offers possible place to hook debug messages etc.
+    def returnCommand(self, command = str()):
         #print( command)
         return command
 
@@ -12,20 +12,23 @@ class chalkBot:
         return cmdString+":"+",".join(parameters)
 
     def move(self, distance):
-        return self.sendCommand(self.createCommandString("move", [str(distance)]))
+        return self.returnCommand(self.createCommandString("move", [str(distance)]))
 
     def turn(self, angle):
-        return self.sendCommand(self.createCommandString("turn", [str(angle)]))
+        return self.returnCommand(self.createCommandString("turn", [str(angle)]))
+
+    def circle(self, angle, radius):
+        return self.returnCommand(self.createCommandString("circle", [str(angle), str(radius)]))
 
     def stop(self):
-        return self.sendCommand(self.createCommandString("stop", []))
+        return self.returnCommand(self.createCommandString("stop", []))
 
     def chalk(self, action):
-        return self.sendCommand(self.createCommandString("chalk", [str(action)]))
+        return self.returnCommand(self.createCommandString("chalk", [str(action)]))
 
     def stepper(self, status = "dis"):
         if status != "dis" and status != "en":
             raise Exception("Wrong argument status to chalkBot.stepper()")
-        return self.sendCommand(self.createCommandString("stepper", [str(status)]))
+        return self.returnCommand(self.createCommandString("stepper", [str(status)]))
 
     
