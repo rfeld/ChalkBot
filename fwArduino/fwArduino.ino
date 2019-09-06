@@ -19,12 +19,7 @@ SoftwareSerial UartToESP(11, 10); // Rx, Tx
 String inputString = "";
 bool enableDebug = false;
 bool autonom = false;
-bool rocket = true;
-
-
-
-//String rocketArray[] = {
-//  {1, 206  , 999 "};
+bool rocket = false;
 
 
 const int rocketArray[29][3]  = {
@@ -32,15 +27,15 @@ const int rocketArray[29][3]  = {
 {1, -435  , 260 },
 {1, 516 , 115 },
 {0,1, -1800    },
-{1, -487  , 115 },
+{1, 487  , 115 },
 {1, 97  , 137 },
 {0,1, -722     },
 {1, -407  , 105 },
-{0,1, 1146     },
+{0,1, -1146     },
 {1, 3352  , 44  },
-{0,1, -2384    },
-{1, -458  , 80  },
-{0,1, -642     },
+{0,1, -584      },
+{1, 458  , 80  },
+{0,1, -1142     },
 {1, -246  , 136 },
 {1, -275  , 612 },
 {0,1, -275     },
@@ -94,7 +89,6 @@ MotionThread motionThread;
 ************************************************************ */
 void setup()
 {
-  // set up the IO tube feet used by the motor to be set to output
   pinMode(X_DIR, OUTPUT); pinMode(X_STP, OUTPUT);
   pinMode(Y_DIR, OUTPUT); pinMode(Y_STP, OUTPUT);
   digitalWrite(X_DIR, LOW);
@@ -146,6 +140,8 @@ void processInput()
       else if(cmd=="debugOn")  enableDebug = true;
       else if(cmd=="debugOff") enableDebug = false;
       else if(cmd=="")         DebugMsg("empty line -> ignore");
+      else if(cmd=="auto")     autonom=true;
+      else if(cmd=="rocket")   rocket=true;
       
       // for command queue
       else if ( cmd == "move"    || 
@@ -153,8 +149,7 @@ void processInput()
                 cmd == "stepper" || 
                 cmd == "chalk"   || 
                 cmd == "circle"  || 
-                cmd == "config"  ||
-                cmd == "auto")
+                cmd == "config"  )
       {
         if (cmdIndex < MAX_CMDS)
         {
@@ -237,12 +232,12 @@ void processQueue(String input)
 //  else if(cmd=="chalk")   Serial.println("chalk");  // tbd
     else if(cmd=="circle")  circle(params[0], params[1]);
     else if(cmd=="config")  configure( params[0], params[1], params[2]);
-    else if(cmd=="auto")    autonom=true;
     else
     {
       String answer = "ERR: ";
       answer+= INVALID_CMD;
-      answer+= ", trying to process invalid command in queue";
+      answer+= ", trying to process invalid command in queue: ";
+      answer+=cmd;
       UartToESP.println(answer); 
     }
   
@@ -265,7 +260,8 @@ void configure(String speed, String acc, String rampType)
   if      (rampType == "exp") ramp = RAMP_EXP;
   else if (rampType == "lin") ramp = RAMP_LIN;
 
-  motionThread.configure(speed_sps, accFactor, ramp);
+  // Scale Factor fpr Microstepping                  V
+  motionThread.configure(speed_sps, accFactor, ramp, 4);
 }
 
 /** ********************************************************
@@ -419,6 +415,8 @@ void loop()
   if (UartToESP.available() > 0) 
   {
     autonom = false;
+    rocket  = false;
+    rocketCount = 0;
     processInput();
   }
   else if(rocket && cmdIndex<3 && rocketCount < rocketLen)
@@ -430,7 +428,7 @@ void loop()
       cmd = "circle: ";
       cmd +=rocketArray[rocketCount][1];
       cmd += ",";
-      cmd += (rocketArray[rocketCount][2]*2);
+      cmd += (rocketArray[rocketCount][2]*1);
     }
     else 
     {

@@ -10,6 +10,7 @@ bool MotionThread::abortMotion = false;
 int  MotionThread::step = 0;
 bool MotionThread::moving = false;
 float MotionThread::acc = 6;
+unsigned long int  MotionThread::timeFactor = 500000;
 unsigned long int  MotionThread::stepInterval = 10000;
 unsigned long int  MotionThread::currentSpeed_sps = 10;
 unsigned long int  MotionThread::targetSpeed_sps  = 100;
@@ -22,17 +23,19 @@ unsigned long int  MotionThread::intervalLeft = 10;
 unsigned long int  MotionThread::intervalRight = 10;
 unsigned int       MotionThread::stepsForRamp = 0;
 RampTypes_t        MotionThread::ramp = RAMP_LIN;
+int MotionThread::microsteps = 4; // suitable values are 1, 2, 4, 8, 16 according to jumper setting
 
 
 
 
-bool MotionThread::configure(int speed_sps, float accFactor, RampTypes_t rampType)
+bool MotionThread::configure(int speed_sps, float accFactor, RampTypes_t rampType, int microsteps)
 {
   if(moving) return false;
   
-  targetSpeed_sps  = speed_sps;  
-  acc              = accFactor;
-  ramp             = rampType;
+  MotionThread::targetSpeed_sps  = speed_sps;  
+  MotionThread::acc              = accFactor;
+  MotionThread::ramp             = rampType;
+  MotionThread::microsteps       = microsteps;
 }
 
 
@@ -41,6 +44,11 @@ bool MotionThread::configure(int speed_sps, float accFactor, RampTypes_t rampTyp
 /////////////////////////////////////////////////////////
 bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 {  
+
+  String microString = "Microstep in start setting is ";
+  microString += microsteps;
+  Serial.println(microString);
+  
   if(moving) return false;
   
   moving = true;
@@ -56,7 +64,7 @@ bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 
   if(steps<0)steps=-steps;
 
-  step = steps;
+  step = steps*microsteps;
   stepsForRamp = 0;
 
   currentSpeed_sps = 10;
@@ -67,7 +75,7 @@ bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 
   acc = accFactor;
   
-  stepInterval = 1000000/currentSpeed_sps;
+  stepInterval = timeFactor/currentSpeed_sps;
   pulse(); 
   
   return true;
@@ -79,6 +87,10 @@ bool MotionThread::start(bool turn, int steps, int speed_sps, float accFactor)
 /////////////////////////////////////////////////////////
 bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t speedLeft, int32_t speedRight)
 {
+  String microString = "Microstep in startCircle setting is ";
+  microString += microsteps;
+  Serial.println(microString);
+  
   if(moving) return false;  
   moving = true;
   abortMotion  = false;
@@ -87,8 +99,8 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
   targetSpeedRight_sps  = speedRight;
   currentSpeedLeft_sps  = 10;
   targetSpeedLeft_sps   = speedLeft;  
-  intervalRight = 1000000/currentSpeedRight_sps;
-  intervalLeft  = 1000000/currentSpeedLeft_sps;
+  intervalRight = timeFactor/currentSpeedRight_sps;
+  intervalLeft  = timeFactor/currentSpeedLeft_sps;
   
   if(stepsRight>0)  {  digitalWrite(Y_DIR, LOW);   }
   else              {  digitalWrite(Y_DIR, HIGH);  }
@@ -99,7 +111,7 @@ bool MotionThread::startCircle(int32_t stepsLeft, int32_t stepsRight, int32_t sp
 
   if(stepsRight<0)stepsRight=-stepsRight;
   if(stepsLeft <0)stepsLeft =-stepsLeft;
-  step = stepsRight + stepsLeft;
+  step = (stepsRight + stepsLeft)*microsteps;
   stepsForRamp = 0;
 
   //  Serial.println("motionThread");
@@ -141,7 +153,7 @@ static void MotionThread::pulse()
   digitalWrite(Y_STP, HIGH);
 
   currentSpeed_sps = rampFunc(currentSpeed_sps, targetSpeed_sps);
-  stepInterval = 1000000/currentSpeed_sps;
+  stepInterval = timeFactor/currentSpeed_sps;
 
   step--;
   if(abortMotion || step<=0) stop();
@@ -166,7 +178,7 @@ static void MotionThread::pulseCircle()
     stepInterval  = intervalRight;
     intervalLeft  = intervalLeft - intervalRight;
     currentSpeedRight_sps = rampFunc(currentSpeedRight_sps, targetSpeedRight_sps);    
-    intervalRight    = 1000000/currentSpeedRight_sps; 
+    intervalRight    = timeFactor/currentSpeedRight_sps; 
     
     digitalWrite(Y_STP, LOW);
   }
@@ -177,7 +189,7 @@ static void MotionThread::pulseCircle()
     stepInterval  = intervalLeft;
     intervalRight  = intervalRight - intervalLeft;
     currentSpeedLeft_sps = rampFunc(currentSpeedLeft_sps, targetSpeedLeft_sps);  
-    intervalLeft    = 1000000/currentSpeedLeft_sps; 
+    intervalLeft    = timeFactor/currentSpeedLeft_sps; 
     
     digitalWrite(X_STP, LOW);
   }

@@ -6,7 +6,7 @@ class MotionThread
 {
 public:
 
-  bool configure(int speed_sps, float accFactor, RampTypes_t rampType);
+  bool configure(int speed_sps, float accFactor, RampTypes_t rampType, int microSteps=1);
 
   bool start(bool turn, int steps, int speed_sps, float accFactor);
 
@@ -34,6 +34,8 @@ private:
 
   static float acc;
 
+  static unsigned long int timeFactor;
+
   static unsigned long int stepInterval;
 
   static unsigned long int currentSpeed_sps;
@@ -55,5 +57,7 @@ private:
   static unsigned int       stepsForRamp;
 
   static RampTypes_t        ramp;
+
+  static int microsteps;
 
 };
