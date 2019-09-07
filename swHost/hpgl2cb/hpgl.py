@@ -81,7 +81,8 @@ def parse_hpgl(gl_file):
             c = glf.read(1)
             if c == ';':
                 continue
-            cur_pen = int(c)
+            print("!"+str(ord(c)))
+            #cur_pen = int(c)
         elif cmd == 'LT':
             pass
         elif cmd == 'SA':
