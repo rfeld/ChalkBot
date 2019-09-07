@@ -20,6 +20,7 @@ String inputString = "";
 bool enableDebug = false;
 bool autonom = false;
 bool rocket = false;
+float rocketScale = 1;
 
 
 const int rocketArray[29][3]  = {
@@ -141,7 +142,32 @@ void processInput()
       else if(cmd=="debugOff") enableDebug = false;
       else if(cmd=="")         DebugMsg("empty line -> ignore");
       else if(cmd=="auto")     autonom=true;
-      else if(cmd=="rocket")   rocket=true;
+      else if(cmd=="rocket")
+      {
+        rocket=true;
+        String param;
+        rocketScale = 1;
+        
+        if(endOfCmd >0)
+        {
+          int from = endOfCmd+1;
+          param = inputString.substring(from);        
+          rocketScale = param.toFloat();  
+        }
+                
+        if(rocketScale < 0.2 || rocketScale > 10)
+        {
+          rocketScale = 1;
+          String answer = "ERR: ";
+          answer += CMD_QUEUE_FULL;
+          answer += ", invalid parameter or (oor 0.2 to 10): ";
+          answer += param;
+          UartToESP.println( answer );
+        }                                     
+
+          Serial.print("rocket scale is: ");
+          Serial.println(rocketScale);
+      }
       
       // for command queue
       else if ( cmd == "move"    || 
@@ -428,7 +454,7 @@ void loop()
       cmd = "circle: ";
       cmd +=rocketArray[rocketCount][1];
       cmd += ",";
-      cmd += (rocketArray[rocketCount][2]*1);
+      cmd += (rocketArray[rocketCount][2]*rocketScale);
     }
     else 
     {
