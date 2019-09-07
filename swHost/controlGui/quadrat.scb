@@ -1,0 +1,14 @@
+# Definiere ein Quadrat mit 0,5m Kantenlänge
+move;500
+turn;900
+#
+move;500
+turn;900
+#
+move;500
+turn;900
+#
+move;500
+turn;900
+#
+stepper;dis
