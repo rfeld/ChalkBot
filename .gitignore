@@ -1,2 +1,5 @@
-swHost/hpgl2cb/__pycache__/fonts.cpython-37.pyc
-swHost/hpgl2cb/__pycache__/hpgl.cpython-37.pyc
+.vscode/tasks.json
+.vscode/.ropeproject/objectdb
+**/__pycache__/*
+**/.DS_Store
+

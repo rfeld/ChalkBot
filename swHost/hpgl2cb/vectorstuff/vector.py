@@ -10,7 +10,7 @@ class vector:
         return math.sqrt(self.x**2 + self.y**2)
 
     def phi(self):
-        return 180/math.pi*math.atan2(self.y, self.x)
+        return 180 / math.pi * math.atan2( self.y, self.x )
 
     # Overload "+" Operator for vector addition
     def __add__(self, other):

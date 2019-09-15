@@ -10,7 +10,6 @@ from vectorstuff.state_vector import state_vector
 
 cb = chalkbot.chalkBot()
 
-
 def main():
     # Read file to be opened from command line
     # Expected Format: hpgl2cb.py <filename.hpgl>
@@ -65,21 +64,21 @@ def convert_hpgl_to_cb( hpglqueue ):
 
     for command in hpglqueue:
         if command[0] == "IN":
-            print("Init command is skipped")
+            print(" - Init command is skipped")
         elif command[0] == "SP":
-            print("Pen selection command is not used (yet...)")
+            print(" - Pen selection command is not used (yet...)")
         elif command[0] == "PU":
             if flag_drawing_started:
-                print("Movement with pen up")
+                print(" + Movement with pen up")
             else:
-                print("Movement with pen up before drawing --> ignored")
+                print(" - Movement with pen up before drawing --> ignored")
             # update state vector
             cb_state_vector.x=1
         elif command[0] == "PD":
-            print("Movement with pen down --> Drawing!")
             if not flag_drawing_started:
                 flag_drawing_started = True
-                print("First time pen is put down --> Setting global origin")
+                print(" + First time pen is put down --> Setting global origin")
+            print(" + Movement with pen down --> Drawing!")
     return ["turn", 3600] # ToDo: Implement
 
 if __name__ == "__main__":
